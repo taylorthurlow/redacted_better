@@ -34,7 +34,28 @@ class RedactedBetter
     exit unless account.login
 
     sp = SnatchParser.new(user_id: account.user_id, cookie: account.cookie)
-    puts sp.all
+    snatches = sp.all
+
+    snatches.each do |snatch|
+      next unless (info = sp.info_by_group_id(snatch[:group_id]))
+
+      torrent = info['torrents'].find { |t| t['id'].to_i == snatch[:torrent_id] }
+      if torrent
+        artist_name = if info['group']['musicInfo']['artists'].count > 1
+                        'Various Artists'
+                      else
+                        info['group']['musicInfo']['artists'].first['name']
+                      end
+        release_name = info['group']['name']
+        release_year = torrent['remastered'] ? torrent['remasterYear'] : info['group']['year']
+        format = torrent['format']
+
+        info_str = "#{artist_name} - #{release_name} (#{release_year}) [#{format}]"
+        Log.info("Release found: #{info_str}")
+      else
+        Log.warning("Unable to find torrent #{snatch[:torrent_id]} in group #{snatch[:group_id]}.")
+      end
+    end
   end
 
   def self.root

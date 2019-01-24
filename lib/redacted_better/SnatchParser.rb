@@ -40,4 +40,19 @@ class SnatchParser
 
     result
   end
+
+  def info_by_group_id(group_id)
+    response = Request.send_request(
+      action: 'torrentgroup',
+      cookie: @cookie,
+      params: { id: group_id }
+    )
+
+    if response[:status] == 'success'
+      response[:response]
+    else
+      Log.error("Failed to get info for torrent group #{group_id}.")
+      false
+    end
+  end
 end
