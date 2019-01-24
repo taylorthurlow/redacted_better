@@ -18,7 +18,7 @@ class SnatchParser
       url = "torrents.php?type=snatched&userid=#{@user_id}&format=FLAC&page=#{page}"
       response = Faraday.new(url: 'https://redacted.ch/').get do |request|
         request.url url
-        request.headers = { 'Cookie' => @cookie }
+        request.headers = Request.headers('cookie' => @cookie)
       end
 
       response.body.scan(parse_regex) do |group_id, torrent_id|
