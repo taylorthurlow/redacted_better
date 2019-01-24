@@ -38,7 +38,7 @@ class Request
   # these headers are generally applicable to any requests being made by
   # redacted_better, whether they are JSON API requests or just requests for
   # HTML page contents.
-  def self.headers(params: {})
+  def self.headers(params = {})
     {
       'User-Agent' => "redacted_better/#{RedactedBetter::VERSION} "\
                       '(github.com/taylorthurlow/redacted_better)'
@@ -49,7 +49,7 @@ class Request
   # which all are in the form of "ajax.php?action=". Using these headers will
   # break responses to requests which are expected to be in HTML format like
   # "torrents.php".
-  def self.action_headers(params: {})
+  def self.action_headers(params = {})
     headers.merge(
       'Cache-Control' => 'max-age=0',
       'Connection' => 'keep-alive',
