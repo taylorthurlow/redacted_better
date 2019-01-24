@@ -17,21 +17,23 @@ class Account
       @username ||= find_username
       @password ||= find_password
 
+      Log.info("Logging in as #{@username}... ", newline: false)
+
       conn = Faraday.new(url: 'https://redacted.ch/')
       response = conn.post 'login.php', username: @username, password: @password
 
       case response.status
       when 302
-        Log.success("Authorization of user #{@username} successful.")
+        Log.success('success!')
         auth_success = true
         @cookie = /session=[^;]*/.match(response.headers['set-cookie'])[0]
         set_user_info
       when 200
-        Log.error('Authorization failed. Try again.')
+        Log.error('failure.')
         @username = prompt_username
         @password = prompt_password
       else
-        Log.error("Something went wrong - code #{response.status}")
+        Log.error("error code #{response.status}.")
         return false
       end
     end

@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
   s.add_dependency('tty-config', '~> 0.3')
   s.add_dependency('tty-file', '~> 0.7')
   s.add_dependency('tty-prompt', '~> 0.18')
+  s.add_dependency('tty-spinner', '~> 0.9')
 
   s.add_development_dependency('factory_bot', '~> 4.11')
   s.add_development_dependency('guard', '~> 2.15')

@@ -7,6 +7,7 @@ require 'slop'
 require 'tty-config'
 require 'tty-file'
 require 'tty-prompt'
+require 'tty-spinner'
 
 require_rel 'redacted_better'
 

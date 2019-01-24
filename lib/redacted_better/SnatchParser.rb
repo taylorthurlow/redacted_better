@@ -10,6 +10,9 @@ class SnatchParser
     parse_regex = /torrents\.php\?id=(\d+)&amp;torrentid=(\d+)/
     result = []
 
+    spinner = TTY::Spinner.new('[:spinner] Loading snatches...', format: :dots_4)
+    spinner.auto_spin
+
     until finished
       page = 1
       url = "torrents.php?type=snatched&userid=#{@user_id}&format=FLAC&page=#{page}"
@@ -27,6 +30,8 @@ class SnatchParser
       finished = !response.body.include?('Next &gt;')
       page += 1
     end
+
+    spinner.stop(Pastel.new.green('done!'))
 
     result
   end
