@@ -12,7 +12,7 @@ require_rel 'redacted_better'
 
 class RedactedBetter
   def initialize
-    @opts = Slop.parse do |o|
+    $opts = Slop.parse do |o|
       o.string '-c', '--config', 'path to an alternate config file'
       o.string '-u', '--username', 'your redacted username'
       o.string '-p', '--password', 'your redacted password'
@@ -25,9 +25,10 @@ class RedactedBetter
 
     handle_help_opt
 
-    @config = load_config
-    @username = find_username
-    @password = find_password
+    $config = load_config
+
+    account = Account.new
+    account.login
   end
 
   def self.root
@@ -36,21 +37,9 @@ class RedactedBetter
 
   private
 
-  def find_username
-    @opts[:username] ||
-      @config.fetch(:username) ||
-      TTY::Prompt.new.ask('Redacted username?', required: true, modify: :strip)
-  end
-
-  def find_password
-    @opts[:password] ||
-      @config.fetch(:password) ||
-      TTY::Prompt.new.ask('Redacted password?', required: true)
-  end
-
   def handle_help_opt
-    if @opts[:help]
-      puts @opts
+    if $opts[:help]
+      puts $opts
       exit
     end
   end
@@ -58,11 +47,11 @@ class RedactedBetter
   def load_config
     config = TTY::Config.new
 
-    if @opts[:config]
+    if $opts[:config]
       # User has supplied an alternate config file path
-      if File.exist? @opts[:config]
-        config.prepend_path File.dirname(@opts[:config])
-        config.filename = File.basename(@opts[:config], '.*')
+      if File.exist? $opts[:config]
+        config.prepend_path File.dirname($opts[:config])
+        config.filename = File.basename($opts[:config], '.*')
       else
         puts Pastel.new.red('No configuration file at provided path.')
         exit
