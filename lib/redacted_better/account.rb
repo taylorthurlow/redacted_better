@@ -1,4 +1,6 @@
 class Account
+  attr_reader :user_id, :cookie
+
   def initialize
     @username = nil
     @password = nil
@@ -30,15 +32,17 @@ class Account
         @password = prompt_password
       else
         puts Pastel.new.red("Something went wrong - code #{response.status}")
-        exit
+        return false
       end
     end
+
+    true
   end
 
   private
 
   def set_user_info
-    response = Request.send_request('index', @cookie)
+    response = Request.send_request(action: 'index', cookie: @cookie)
     @authkey = response[:response]['authkey']
     @passkey = response[:response]['passkey']
     @user_id = response[:response]['id']

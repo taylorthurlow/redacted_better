@@ -2,7 +2,7 @@ class Request
   @@rate_limit = 2.0 # minimum seconds between each request
   @@last_request_time = Time.now.to_f
 
-  def self.send_request(action, cookie, params = {})
+  def self.send_request(action:, cookie:, params: {})
     sleep(0.1) while seconds_since_last_request < @@rate_limit
 
     response = Faraday.new(url: 'https://redacted.ch/').get do |request|

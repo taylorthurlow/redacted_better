@@ -13,11 +13,12 @@ require_rel 'redacted_better'
 class RedactedBetter
   def initialize
     $opts = Slop.parse do |o|
-      o.string '-c', '--config', 'path to an alternate config file'
+      o.string '-c', '--config',   'path to an alternate config file'
+      o.bool   '-q', '--quiet',    'only print to STDOUT when errors occur'
       o.string '-u', '--username', 'your redacted username'
       o.string '-p', '--password', 'your redacted password'
-      o.bool '-h', '--help', 'print help'
-      o.on '--version', 'print the version' do
+      o.bool   '-h', '--help',     'print help'
+      o.on     '-v', '--version',  'print the version' do
         puts RedactedBetter::VERSION
         exit
       end
@@ -28,7 +29,10 @@ class RedactedBetter
     $config = load_config
 
     account = Account.new
-    account.login
+    exit unless account.login
+
+    # sp = SnatchParser.new(user_id: account.user_id, cookie: account.cookie)
+    # snatches = sp.all
   end
 
   def self.root
