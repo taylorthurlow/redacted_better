@@ -3,7 +3,7 @@ class Request
   @@last_request_time = Time.now.to_f
 
   def self.send_request(action:, cookie:, params: {})
-    sleep(0.1) while seconds_since_last_request < @@rate_limit
+    wait_for_request
 
     response = Faraday.new(url: 'https://redacted.ch/').get do |request|
       url = "ajax.php?action=#{action}"
@@ -12,6 +12,8 @@ class Request
       request.headers = action_headers('Cookie' => cookie)
     end
 
+    notify_request_sent
+
     data = JSON.parse(response.body)
 
     {
@@ -19,6 +21,14 @@ class Request
       status: data['status'],
       response: data['response']
     }
+  end
+
+  def self.wait_for_request
+    sleep(0.1) while seconds_since_last_request < @@rate_limit
+  end
+
+  def self.notify_request_sent
+    @@last_request_time = Time.now.to_f
   end
 
   def self.seconds_since_last_request
