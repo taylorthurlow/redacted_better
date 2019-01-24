@@ -38,10 +38,10 @@ class Account
   private
 
   def set_user_info
-    response = Request.send(action: 'index', cookie: @cookie)
-    @authkey = response['response']['authkey']
-    @passkey = response['response']['passkey']
-    @user_id = response['response']['id']
+    response = Request.send_request('index', @cookie)
+    @authkey = response[:response]['authkey']
+    @passkey = response[:response]['passkey']
+    @user_id = response[:response]['id']
   end
 
   def find_username
