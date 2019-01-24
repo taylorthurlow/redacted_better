@@ -22,16 +22,16 @@ class Account
 
       case response.status
       when 302
-        puts Pastel.new.green("Authorization of user #{@username} successful.")
+        Log.success("Authorization of user #{@username} successful.")
         auth_success = true
         @cookie = /session=[^;]*/.match(response.headers['set-cookie'])[0]
         set_user_info
       when 200
-        puts Pastel.new.red('Authorization failed. Try again.')
+        Log.error('Authorization failed. Try again.')
         @username = prompt_username
         @password = prompt_password
       else
-        puts Pastel.new.red("Something went wrong - code #{response.status}")
+        Log.error("Something went wrong - code #{response.status}")
         return false
       end
     end

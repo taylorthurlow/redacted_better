@@ -25,14 +25,15 @@ class RedactedBetter
     end
 
     handle_help_opt
+    $quiet = $opts[:quiet]
 
     $config = load_config
 
     account = Account.new
     exit unless account.login
 
-    # sp = SnatchParser.new(user_id: account.user_id, cookie: account.cookie)
-    # snatches = sp.all
+    sp = SnatchParser.new(user_id: account.user_id, cookie: account.cookie)
+    puts sp.all
   end
 
   def self.root
@@ -57,7 +58,7 @@ class RedactedBetter
         config.prepend_path File.dirname($opts[:config])
         config.filename = File.basename($opts[:config], '.*')
       else
-        puts Pastel.new.red('No configuration file at provided path.')
+        Log.error('No configuration file at provided path.')
         exit
       end
     else
