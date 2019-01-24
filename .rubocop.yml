@@ -70,3 +70,6 @@ Style/FrozenStringLiteralComment:
 
 Style/GuardClause:
   Enabled: false
+
+Style/GlobalVars:
+  Enabled: false
