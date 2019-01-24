@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'redacted_better'
+
+rb = RedactedBetter.new
