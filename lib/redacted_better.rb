@@ -1,4 +1,11 @@
-require 'pry-byebug'
+# require 'pry-byebug'
+
+require 'find'
+require 'json'
+
+require 'flacinfo'
+require 'htmlentities'
+require 'mechanize'
 
 require 'faraday'
 require 'pastel'
@@ -33,28 +40,18 @@ class RedactedBetter
     account = Account.new
     exit unless account.login
 
-    sp = SnatchParser.new(user_id: account.user_id, cookie: account.cookie)
-    snatches = sp.all
+    api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
 
-    snatches.each do |snatch|
-      next unless (info = sp.info_by_group_id(snatch[:group_id]))
+    api.all_snatches.each do |snatch|
+      next unless (info = api.info_by_group_id(snatch[:group_id]))
 
-      torrent = info['torrents'].find { |t| t['id'].to_i == snatch[:torrent_id] }
+      torrent = info['torrents'].find { |t| t['id'] == snatch[:torrent_id] }
       if torrent
-        artist_name = if info['group']['musicInfo']['artists'].count > 1
-                        'Various Artists'
-                      else
-                        info['group']['musicInfo']['artists'].first['name']
-                      end
-        release_name = info['group']['name']
-        release_year = torrent['remastered'] ? torrent['remasterYear'] : info['group']['year']
-        format = torrent['format']
-
-        info_str = "#{artist_name} - #{release_name} (#{release_year}) [#{format}]"
-        Log.info("Release found: #{info_str}")
+        handle_found_release(api, info['group'], torrent, info['torrents'])
       else
         Log.warning("Unable to find torrent #{snatch[:torrent_id]} in group #{snatch[:group_id]}.")
       end
+      Log.info('')
     end
   end
 
@@ -63,6 +60,78 @@ class RedactedBetter
   end
 
   private
+
+  def handle_found_release(api, group, torrent, all_torrents)
+    Log.info("Release found: #{release_info_string(group, torrent)}")
+    Log.info("  https://redacted.ch/torrents.php?id=#{group['id']}&torrentid=#{torrent['id']}")
+    file_list = torrent['fileList'].gsub(/\|\|\|/, '').split(/\{\{\{\d+\}\}\}/)
+    dl_dir = $config.fetch(:directories, :download)
+
+    if torrent['filePath'] # is the torrent stored in a single directory?
+      flac_path = File.join(dl_dir, torrent['filePath'])
+
+      unless Dir.exist?(flac_path)
+        Log.warning('  Torrent is snatched but missing from download directory.')
+        return
+      end
+
+      missing_files = file_list.count { |f| !File.exist? File.join(flac_path, f) }
+    else
+      missing_files = file_list.count { |f| !File.exist? File.join(dl_dir, f) }
+    end
+
+    if missing_files.positive?
+      Log.warning("  Missing #{missing_files} files(s), skipping.")
+      return
+    end
+
+    if Transcode.directory_any_multichannel?(flac_path)
+      Log.warning('  Release is multichannel, skipping torrent.')
+      return
+    end
+
+    if Transcode.directory_is_24bit?(flac_path) && torrent['encoding'] != '24bit Lossless'
+      if $config.fetch(:fix_mislabeled_24bit)
+        Log.warning('  Skipping fix of mislabeled 24-bit torrent.')
+      else
+        api.set_torrent_24bit(torrent['id'])
+      end
+    end
+
+    formats_missing = api.formats_missing(group, torrent, all_torrents)
+    if formats_missing.any?
+      missing_string = formats_missing.map { |f| f.join(' ') }.join(', ')
+      Log.success("  Missing formats: #{missing_string}")
+    else
+      Log.info("  No formats missing.")
+    end
+
+#     spinners = TTY::Spinner::Multi.new('[:spinner] top')
+
+#     sp1 = spinners.register '[:spinner] one'
+#     sp2 = spinners.register '[:spinner] two'
+
+#     sp1.auto_spin
+#     sp2.auto_spin
+
+#     sleep(5) # Perform work
+
+#     sp1.success
+#     sp2.success
+  end
+
+  def release_info_string(group, torrent)
+    artist_name = if group['musicInfo']['artists'].count > 1
+                    'Various Artists'
+                  else
+                    group['musicInfo']['artists'].first['name']
+                  end
+    release_name = group['name']
+    release_year = torrent['remastered'] ? torrent['remasterYear'] : group['year']
+    format = torrent['format']
+
+    "#{artist_name} - #{release_name} (#{release_year}) [#{format}]"
+  end
 
   def handle_help_opt
     if $opts[:help]

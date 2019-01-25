@@ -17,6 +17,9 @@ Gem::Specification.new do |s|
   s.required_ruby_version = '>= 2.3'
 
   s.add_dependency('faraday', '~> 0.15')
+  s.add_dependency('flacinfo-rb', '~> 1.0')
+  s.add_dependency('htmlentities', '~> 4.3')
+  s.add_dependency('mechanize', '~> 2.7')
   s.add_dependency('pastel', '~> 0.7')
   s.add_dependency('require_all', '~> 2.0')
   s.add_dependency('slop', '~> 4.6.2')
