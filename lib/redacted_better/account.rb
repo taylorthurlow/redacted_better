@@ -39,6 +39,9 @@ class Account
     end
 
     true
+  rescue Faraday::TimeoutError
+    Log.error('logging in timed out. Perhaps Redacted is down?')
+    false
   end
 
   private
