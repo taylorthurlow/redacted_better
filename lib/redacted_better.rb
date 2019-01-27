@@ -108,9 +108,6 @@ class RedactedBetter
       return
     end
 
-    missing_string = formats_missing.map { |f| f.join(' ') }.join(', ')
-    Log.success("  Missing formats: #{missing_string}")
-
     tags_results = Tags.all_valid_tags?(file_list)
 
     unless tags_results[:valid]
@@ -122,23 +119,19 @@ class RedactedBetter
       return
     end
 
-    formats_missing.each { |f, e| handle_missing_format(f, e, api, fixed_24bit) }
+    spinners = TTY::Spinner::Multi.new('[:spinner] Processing missing formats:')
+    formats_missing.each do |f, e|
+      spinners.register("[:spinner] #{f} #{e}") do |sp|
+        handle_missing_format(f, e, api, fixed_24bit, sp)
+        sp.success(Pastel.new.green('done.'))
+      end
+    end
+
+    spinners.auto_spin
   end
 
-  def handle_missing_format(format, encoding, _api, fixed_24bit)
-    Log.debug("Handle missing format #{format} #{encoding}.")
-    #     spinners = TTY::Spinner::Multi.new('[:spinner] top')
-
-    #     sp1 = spinners.register '[:spinner] one'
-    #     sp2 = spinners.register '[:spinner] two'
-
-    #     sp1.auto_spin
-    #     sp2.auto_spin
-
-    #     sleep(5) # Perform work
-
-    #     sp1.success
-    #     sp2.success
+  def handle_missing_format(format, encoding, api, fixed_24bit, spinner)
+    sleep(10)
   end
 
   def handle_help_opt

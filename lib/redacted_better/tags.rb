@@ -23,7 +23,7 @@ class Tags
       end
     end
 
-    { valid: !errors.any?, errors: errors }
+    { valid: errors.none?, errors: errors }
   end
 
   def self.all_valid_tags?(files)
@@ -36,11 +36,7 @@ class Tags
     }
   end
 
-  def self.valid_title_tag?(tag)
-    true
-  end
-
   def self.valid_track_tag?(tag)
-    true
+    /^[A-Za-z]?\d+$/ =~ tag
   end
 end
