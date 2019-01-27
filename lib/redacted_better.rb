@@ -35,19 +35,27 @@ class RedactedBetter
     handle_help_opt
     $quiet = $opts[:quiet]
 
-    $config = load_config
+    $config = Config.load_config
 
     account = Account.new
     exit unless account.login
 
-    api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
+    $api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
 
-    api.all_snatches.each do |snatch|
-      next unless (info = api.info_by_group_id(snatch[:group_id]))
+    snatches = $api.all_snatches
+    Log.info('')
+    snatches.each do |snatch|
+      next unless (info = $api.group_info(snatch[:group_id]))
 
-      torrent = info['torrents'].find { |t| t['id'] == snatch[:torrent_id] }
+      group = Group.new(info['group'])
+      info['torrents'].each do |torrent_hash|
+        group.torrents << Torrent.new(torrent_hash, group)
+      end
+
+      torrent = group.torrents.find { |t| t.id == snatch[:torrent_id] }
+
       if torrent
-        handle_found_release(api, info['group'], torrent, info['torrents'])
+        handle_found_release(group, torrent)
       else
         Log.warning("Unable to find torrent #{snatch[:torrent_id]} in group #{snatch[:group_id]}.")
       end
@@ -55,31 +63,16 @@ class RedactedBetter
     end
   end
 
-  def self.root
-    File.expand_path('..', __dir__)
-  end
-
   private
 
-  def handle_found_release(api, group, torrent, all_torrents)
-    Log.info("Release found: #{Utils.release_info_string(group, torrent)}")
-    Log.info('  https://redacted.ch/torrents.php' \
-                                   "?id=#{group['id']}" \
-                                   "&torrentid=#{torrent['id']}")
+  def handle_found_release(group, torrent)
+    Log.info("Release found: #{torrent}")
+    Log.info("  #{torrent.url}")
 
     dl_dir = $config.fetch(:directories, :download)
-    # torrent['filePath'] might not be set but will not be included in the path
-    # if it is blank
-    torrent_path = File.join(dl_dir, torrent['filePath'])
-    file_list = torrent['fileList'].gsub(/\|\|\|/, '')
-                                   .split(/\{\{\{\d+\}\}\}/)
-                                   .map { |p| File.join(torrent_path, p) }
+    torrent_path = File.join(dl_dir, torrent.file_path)
 
-    # is the torrent stored in a directory as required?
-    properly_contained = !torrent['filePath'].empty?
-
-    missing_files = file_list.reject { |f| File.exist?(f) }
-                             .map { |f| File.basename(f) }
+    missing_files = torrent.missing_files
 
     if missing_files.any?
       Log.warning("  Missing #{missing_files.count} files(s):")
@@ -87,29 +80,24 @@ class RedactedBetter
       return
     end
 
-    if Transcode.any_multichannel?(file_list)
-      Log.warning('  Release is multichannel, skipping torrent.')
+    if torrent.any_multichannel?
+      Log.warning('  Torrent is multichannel, skipping.')
       return
     end
 
     fixed_24bit = false
-    if Transcode.mislabeled_24bit?(file_list, torrent['encoding'])
+    if torrent.mislabeled_24bit?
       if $config.fetch(:fix_mislabeled_24bit)
         Log.warning('  Skipping fix of mislabeled 24-bit torrent.')
       else
-        fixed_24bit = api.set_torrent_24bit(torrent['id'])
+        fixed_24bit = $api.set_torrent_24bit(torrent['id'])
       end
     end
 
-    formats_missing = api.formats_missing(group, torrent, all_torrents)
+    formats_missing = group.formats_missing(torrent)
+    return unless formats_missing.any?
 
-    unless formats_missing.any?
-      Log.info('  No formats missing.')
-      return
-    end
-
-    tags_results = Tags.all_valid_tags?(file_list)
-
+    tags_results = torrent.check_valid_tags
     unless tags_results[:valid]
       Log.error('  Found invalid tags:')
       tags_results[:errors].each do |file, message|
@@ -122,7 +110,7 @@ class RedactedBetter
     spinners = TTY::Spinner::Multi.new('[:spinner] Processing missing formats:')
     formats_missing.each do |f, e|
       spinners.register("[:spinner] #{f} #{e}") do |sp|
-        handle_missing_format(f, e, api, fixed_24bit, sp)
+        handle_missing_format(torrent, f, e, fixed_24bit, sp)
         sp.success(Pastel.new.green('done.'))
       end
     end
@@ -130,8 +118,9 @@ class RedactedBetter
     spinners.auto_spin
   end
 
-  def handle_missing_format(format, encoding, api, fixed_24bit, spinner)
-    sleep(10)
+  def handle_missing_format(torrent, format, encoding, fixed_24bit, spinner)
+    # tmp_dir = Dir.mktmpdir
+    # transcode_dir = Transcode.transcode()
   end
 
   def handle_help_opt
@@ -139,38 +128,5 @@ class RedactedBetter
       puts $opts
       exit
     end
-  end
-
-  def load_config
-    config = TTY::Config.new
-
-    if $opts[:config]
-      # User has supplied an alternate config file path
-      if File.exist? $opts[:config]
-        config.prepend_path File.dirname($opts[:config])
-        config.filename = File.basename($opts[:config], '.*')
-      else
-        Log.error('No configuration file at provided path.')
-        exit
-      end
-    else
-      # User wants to use the built in config file path
-      default_path = File.join(Dir.home, '.config', 'redacted_better')
-      config.prepend_path default_path
-      TTY::File.create_dir(default_path)
-      config.filename = 'redacted_better'
-      config.extname = '.yaml'
-
-      full_path = File.join(default_path, config.filename + config.extname)
-      unless File.exist? full_path
-        # Copy default config file into place
-        TTY::File.copy_file('default_config.yaml', full_path) do |f|
-          "# Default config file, created at #{Time.now}\n\n" + f
-        end
-      end
-    end
-
-    config.read
-    config
   end
 end

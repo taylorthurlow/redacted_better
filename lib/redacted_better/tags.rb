@@ -26,16 +26,6 @@ class Tags
     { valid: errors.none?, errors: errors }
   end
 
-  def self.all_valid_tags?(files)
-    results = files.select { |f| File.extname(f) == '.flac' }
-                   .map { |f| valid_tags?(f) }
-
-    {
-      valid: results.all? { |r| r[:valid] },
-      errors: results.map { |r| r[:errors] }.flatten
-    }
-  end
-
   def self.valid_track_tag?(tag)
     /^[A-Za-z]?\d+$/ =~ tag
   end
