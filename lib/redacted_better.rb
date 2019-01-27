@@ -1,4 +1,4 @@
-# require 'pry-byebug'
+require 'pry-byebug'
 
 require 'find'
 require 'json'
@@ -62,75 +62,83 @@ class RedactedBetter
   private
 
   def handle_found_release(api, group, torrent, all_torrents)
-    Log.info("Release found: #{release_info_string(group, torrent)}")
-    Log.info("  https://redacted.ch/torrents.php?id=#{group['id']}&torrentid=#{torrent['id']}")
-    file_list = torrent['fileList'].gsub(/\|\|\|/, '').split(/\{\{\{\d+\}\}\}/)
+    Log.info("Release found: #{Utils.release_info_string(group, torrent)}")
+    Log.info('  https://redacted.ch/torrents.php' \
+                                   "?id=#{group['id']}" \
+                                   "&torrentid=#{torrent['id']}")
+
     dl_dir = $config.fetch(:directories, :download)
+    # torrent['filePath'] might not be set but will not be included in the path
+    # if it is blank
+    torrent_path = File.join(dl_dir, torrent['filePath'])
+    file_list = torrent['fileList'].gsub(/\|\|\|/, '')
+                                   .split(/\{\{\{\d+\}\}\}/)
+                                   .map { |p| File.join(torrent_path, p) }
 
-    if torrent['filePath'] # is the torrent stored in a single directory?
-      flac_path = File.join(dl_dir, torrent['filePath'])
+    # is the torrent stored in a directory as required?
+    properly_contained = !torrent['filePath'].empty?
 
-      unless Dir.exist?(flac_path)
-        Log.warning('  Torrent is snatched but missing from download directory.')
-        return
-      end
+    missing_files = file_list.reject { |f| File.exist?(f) }
+                             .map { |f| File.basename(f) }
 
-      missing_files = file_list.count { |f| !File.exist? File.join(flac_path, f) }
-    else
-      missing_files = file_list.count { |f| !File.exist? File.join(dl_dir, f) }
-    end
-
-    if missing_files.positive?
-      Log.warning("  Missing #{missing_files} files(s), skipping.")
+    if missing_files.any?
+      Log.warning("  Missing #{missing_files.count} files(s):")
+      missing_files.each { |f| Log.warning("    #{f}") }
       return
     end
 
-    if Transcode.directory_any_multichannel?(flac_path)
+    if Transcode.any_multichannel?(file_list)
       Log.warning('  Release is multichannel, skipping torrent.')
       return
     end
 
-    if Transcode.directory_is_24bit?(flac_path) && torrent['encoding'] != '24bit Lossless'
+    fixed_24bit = false
+    if Transcode.mislabeled_24bit?(file_list, torrent['encoding'])
       if $config.fetch(:fix_mislabeled_24bit)
         Log.warning('  Skipping fix of mislabeled 24-bit torrent.')
       else
-        api.set_torrent_24bit(torrent['id'])
+        fixed_24bit = api.set_torrent_24bit(torrent['id'])
       end
     end
 
     formats_missing = api.formats_missing(group, torrent, all_torrents)
-    if formats_missing.any?
-      missing_string = formats_missing.map { |f| f.join(' ') }.join(', ')
-      Log.success("  Missing formats: #{missing_string}")
-    else
-      Log.info("  No formats missing.")
+
+    unless formats_missing.any?
+      Log.info('  No formats missing.')
+      return
     end
 
-#     spinners = TTY::Spinner::Multi.new('[:spinner] top')
+    missing_string = formats_missing.map { |f| f.join(' ') }.join(', ')
+    Log.success("  Missing formats: #{missing_string}")
 
-#     sp1 = spinners.register '[:spinner] one'
-#     sp2 = spinners.register '[:spinner] two'
+    tags_results = Tags.all_valid_tags?(file_list)
 
-#     sp1.auto_spin
-#     sp2.auto_spin
+    unless tags_results[:valid]
+      Log.error('  Found invalid tags:')
+      tags_results[:errors].each do |file, message|
+        Log.error("    #{file} - #{message}")
+      end
 
-#     sleep(5) # Perform work
+      return
+    end
 
-#     sp1.success
-#     sp2.success
+    formats_missing.each { |f, e| handle_missing_format(f, e, api, fixed_24bit) }
   end
 
-  def release_info_string(group, torrent)
-    artist_name = if group['musicInfo']['artists'].count > 1
-                    'Various Artists'
-                  else
-                    group['musicInfo']['artists'].first['name']
-                  end
-    release_name = group['name']
-    release_year = torrent['remastered'] ? torrent['remasterYear'] : group['year']
-    format = torrent['format']
+  def handle_missing_format(format, encoding, _api, fixed_24bit)
+    Log.debug("Handle missing format #{format} #{encoding}.")
+    #     spinners = TTY::Spinner::Multi.new('[:spinner] top')
 
-    "#{artist_name} - #{release_name} (#{release_year}) [#{format}]"
+    #     sp1 = spinners.register '[:spinner] one'
+    #     sp2 = spinners.register '[:spinner] two'
+
+    #     sp1.auto_spin
+    #     sp2.auto_spin
+
+    #     sleep(5) # Perform work
+
+    #     sp1.success
+    #     sp2.success
   end
 
   def handle_help_opt
