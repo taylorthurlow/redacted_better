@@ -1,1 +1,17 @@
-some_key: avalue
+# Default config file, created at 2019-01-23 20:20:51 -0800
+
+# Your Redacted username and password
+username: frizkie
+password: ThJ-PdE-6PU-NPy
+
+# Many FLAC torrents on Redacted marked as 16-bit are actually 24-bit, mostly
+# coming from Bandcamp, which does not make a distinction on their download
+# page. If this setting is set to true, redacted_better will attempt to modify
+# the torrent, and get another regular FLAC upload at the same time.
+fix_mislabeled_24bit: true
+
+# File directories
+directories:
+  download: /media/data/torrents/music
+  output: /media/data/torrents/redacted_upload
+  torrents: /media/data/torrents/redacted_upload/torrent_files
