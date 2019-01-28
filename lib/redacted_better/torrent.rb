@@ -88,6 +88,8 @@ class Torrent
       when 'V2 (VBR)'
         'MP3v2'
       end
+    else
+      "#{@format} #{@encoding}"
     end
   end
 
@@ -113,5 +115,22 @@ class Torrent
       'V0' => { format: 'MP3', encoding: 'V0 (VBR)' }
       # 'V2' => { format: 'MP3', encoding: 'V2 (VBR)' }
     }
+  end
+
+  def self.valid_media
+    %w[CD DVD Vinyl Soundboard SACD DAT Cassette WEB Blu-Ray]
+  end
+
+  def self.valid_format
+    %w[MP3 FLAC AAC AC3 DTS]
+  end
+
+  def self.valid_encoding
+    [
+      '192', '256', '320',
+      'V0 (VBR)', 'V1 (VBR)', 'V2 (VBR)', 'APS (VBR)', 'APX (VBR)',
+      'Lossless', '24bit Lossless',
+      'Other'
+    ]
   end
 end
