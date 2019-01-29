@@ -1,12 +1,3 @@
-def generate_file_list
-  # 01 -  Bluejuice - Video Games.flac{{{20972757}}}|||
-  track = rand(1..100)
-  artist = SecureRandom.hex(5)
-  title = SecureRandom.hex(5)
-  id = rand(1_000..1_000_000)
-  "#{track} - #{artist} - #{title}.flac{{{#{id}}}}|||"
-end
-
 FactoryBot.define do
   factory :torrent do
     skip_create

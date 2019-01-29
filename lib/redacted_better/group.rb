@@ -21,6 +21,13 @@ class Group
     end
   end
 
+  def artist=(new_artist)
+    @artists = [{
+      'id' => new_artist[:id] || new_artist['id'],
+      'name' => new_artist[:name] || new_artist['name']
+    }]
+  end
+
   # Given a torrent in a release group, find all torrents in the group which
   # are in the same release group. The returned list will also include the
   # torrent used to identify the release group.

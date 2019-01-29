@@ -78,4 +78,236 @@ describe Torrent do
       expect(torrent.flacs).to eq %w[abc.flac 123.flac]
     end
   end
+
+  describe '#all_24bit?' do
+    before do
+      allow(torrent).to receive(:on_disk?).and_return(true)
+    end
+
+    context 'when all files are 24 bit' do
+      it 'returns true' do
+        allow(Transcode).to receive(:file_is_24bit?).and_return(true)
+
+        expect(torrent.all_24bit?).to be true
+      end
+    end
+
+    context 'when one or more files are not 24 bit' do
+      it 'returns false' do
+        allow(Transcode).to receive(:file_is_24bit?).and_return(false)
+
+        expect(torrent.all_24bit?).to be false
+      end
+    end
+  end
+
+  describe '#mislabeled_24bit?' do
+    context 'when all files are 24bit' do
+      before do
+        allow(torrent).to receive(:all_24bit?).and_return(true)
+      end
+
+      context 'when encoding is 24bit lossless' do
+        it 'returns false' do
+          torrent.encoding = '24bit Lossless'
+
+          expect(torrent.mislabeled_24bit?).to be false
+        end
+      end
+
+      context 'encoding is not 24bit lossless' do
+        it 'returns true' do
+          torrent.encoding = 'Lossless'
+
+          expect(torrent.mislabeled_24bit?).to be true
+        end
+      end
+    end
+
+    context 'when one or more files are not 24bit' do
+      before do
+        allow(torrent).to receive(:all_24bit?).and_return(false)
+      end
+
+      context 'encoding is 24bit lossless' do
+        it 'returns false' do
+          torrent.encoding = '24bit Lossless'
+
+          expect(torrent.mislabeled_24bit?).to be false
+        end
+      end
+
+      context 'encoding is not 24bit lossless' do
+        it 'returns false' do
+          torrent.encoding = 'Lossless'
+
+          expect(torrent.mislabeled_24bit?).to be false
+        end
+      end
+    end
+  end
+
+  describe '#any_multichannel?' do
+    before do
+      allow(torrent).to receive(:on_disk?).and_return(true)
+    end
+
+    context 'when one or more file is multichannel' do
+      it 'returns true' do
+        allow(Transcode).to receive(:file_is_multichannel?).and_return(true)
+
+        expect(torrent.any_multichannel?).to be true
+      end
+    end
+
+    context 'when one or more files are not multichannel' do
+      it 'returns false' do
+        allow(Transcode).to receive(:file_is_multichannel?).and_return(false)
+
+        expect(torrent.any_multichannel?).to be false
+      end
+    end
+  end
+
+  describe '#year' do
+    context 'when torrent is remastered' do
+      before { torrent.remastered = true }
+
+      context 'when remaster year is zero' do
+        before { torrent.remaster_year = 0 }
+
+        it 'returns the group year' do
+          torrent.group.year = 1990
+
+          expect(torrent.year).to eq 1990
+        end
+      end
+
+      context 'when remaster year is not zero' do
+        before { torrent.remaster_year = 2000 }
+
+        it 'returns the remaster year' do
+          expect(torrent.year).to eq 2000
+        end
+      end
+    end
+
+    context 'when torrent is not remastered' do
+      before { torrent.remastered = false }
+
+      it 'returns the group year' do
+        torrent.group.year = 1990
+
+        expect(torrent.year).to eq 1990
+      end
+    end
+  end
+
+  describe '#to_s' do
+    it 'builds the string' do
+      allow(torrent).to receive(:year).and_return(2000)
+      allow(torrent).to receive(:format_shorthand).and_return('FLAC')
+      torrent.group.artist = { id: 123, name: 'artist' }
+      torrent.group.name = 'name'
+      torrent.media = 'CD'
+
+      expect(torrent.to_s).to eq 'artist - name (2000) [CD FLAC]'
+    end
+  end
+
+  describe '#url' do
+    it 'builds the url' do
+      torrent.group.id = 123
+      torrent.id = 456
+
+      url = 'https://redacted.ch/torrents.php?id=123&torrentid=456'
+      expect(torrent.url).to eq url
+    end
+  end
+
+  describe '#missing_files' do
+    it 'gets the list of files that do not exist' do
+      tf1 = Tempfile.new('temp1.flac')
+      tf2 = Tempfile.new('temp2.flac')
+      torrent.file_list = [tf1, tf2, 'thisfiledoesntexist.flac']
+
+      expect(torrent.missing_files).to eq ['thisfiledoesntexist.flac']
+
+      tf1.close(true)
+      tf2.close(true)
+    end
+  end
+
+  describe '#check_valid_tags' do
+    context 'when all files have valid tags' do
+      before { allow(Tags).to receive(:valid_tags?).and_return(valid: true, errors: []) }
+
+      it 'returns valid true and no errors' do
+        result = torrent.check_valid_tags
+
+        expect(result[:valid]).to be true
+        expect(result[:errors]).to be_empty
+      end
+    end
+
+    context 'when some files have invalid tags' do
+      before { allow(Tags).to receive(:valid_tags?).and_return(valid: false, errors: ['asdf.flac', 'errmsg']) }
+
+      it 'returns valid false with errors' do
+        result = torrent.check_valid_tags
+
+        expect(result[:valid]).to be false
+        expect(result[:errors]).to eq ['asdf.flac', 'errmsg']
+      end
+    end
+  end
+
+  describe '#format_shorthand' do
+    context 'when format is flac' do
+      before { torrent.format = 'FLAC' }
+
+      it 'gets the shorthand for regular flac' do
+        torrent.encoding = 'Lossless'
+
+        expect(torrent.format_shorthand).to eq 'FLAC'
+      end
+
+      it 'gets the shorthand for 24bit flac' do
+        torrent.encoding = '24bit Lossless'
+
+        expect(torrent.format_shorthand).to eq 'FLAC24'
+      end
+    end
+
+    context 'when format is MP3' do
+      before { torrent.format = 'MP3' }
+
+      it 'gets the shorthand for 320 MP3' do
+        torrent.encoding = '320'
+
+        expect(torrent.format_shorthand).to eq '320'
+      end
+
+      it 'gets the shorthand for V0 MP3' do
+        torrent.encoding = 'V0 (VBR)'
+
+        expect(torrent.format_shorthand).to eq 'MP3v0'
+      end
+
+      it 'gets the shorthand for V2 MP3' do
+        torrent.encoding = 'V2 (VBR)'
+
+        expect(torrent.format_shorthand).to eq 'MP3v2'
+      end
+    end
+
+    context 'when format is something else' do
+      it 'gets the generic shorthand' do
+        torrent.format = 'asdf'
+        torrent.encoding = 'hjkl'
+
+        expect(torrent.format_shorthand).to eq 'asdf hjkl'
+      end
+    end
+  end
 end
