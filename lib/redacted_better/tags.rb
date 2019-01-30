@@ -17,7 +17,7 @@ class Tags
         next
       end
 
-      unless valid_track_tag?(tags['TRACKNUMBER'])
+      if tag_name == 'TRACKNUMBER' && !valid_track_tag?(tags['TRACKNUMBER'])
         errors << [basename, 'Malformed track number tag.']
         next
       end
@@ -26,7 +26,7 @@ class Tags
     { valid: errors.none?, errors: errors }
   end
 
-  def self.valid_track_tag?(tag)
+  private_class_method def self.valid_track_tag?(tag)
     /^[A-Za-z]?\d+$/ =~ tag
   end
 end
