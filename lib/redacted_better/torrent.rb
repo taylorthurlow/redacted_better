@@ -93,13 +93,6 @@ class Torrent
     end
   end
 
-  def self.parse_file_list(raw_list, root_path)
-    path = File.join($config.fetch(:directories, :download), root_path)
-    raw_list.gsub(/\|\|\|/, '')
-            .split(/\{\{\{\d+\}\}\}/)
-            .map { |p| File.join(path, p) }
-  end
-
   def self.in_same_release_group?(t1, t2)
     t1.media == t2.media &&
       t1.remaster_year == t2.remaster_year &&
@@ -132,5 +125,14 @@ class Torrent
       'Lossless', '24bit Lossless',
       'Other'
     ]
+  end
+
+  private
+
+  def self.parse_file_list(raw_list, root_path)
+    path = File.join($config.fetch(:directories, :download), root_path)
+    raw_list.gsub(/\|\|\|/, '')
+            .split(/\{\{\{\d+\}\}\}/)
+            .map { |p| File.join(path, p) }
   end
 end

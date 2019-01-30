@@ -310,4 +310,57 @@ describe Torrent do
       end
     end
   end
+
+  describe '.in_same_release_group?' do
+    let(:group) { create(:group) }
+    let(:torrent1) { create(:torrent, group: group) }
+    let(:torrent2) { create(:torrent, group: group) }
+    let(:attributes) {
+      [:@media, :@remaster_year, :@remaster_title, :@remaster_record_label,
+       :@remaster_catalogue_number]
+    }
+
+    before do
+      attributes.each do |attr|
+        torrent1.instance_variable_set(attr, 'asdf')
+        torrent2.instance_variable_set(attr, 'asdf')
+      end
+    end
+
+    context 'when all attributes are equal' do
+      it 'returns true' do
+        expect(described_class.in_same_release_group?(torrent1, torrent2)).to be true
+      end
+    end
+
+    it 'returns false when media is not equal' do
+      torrent2.media = '1234'
+
+      expect(described_class.in_same_release_group?(torrent1, torrent2)).to be false
+    end
+
+    it 'returns false when remaster year is not equal' do
+      torrent2.remaster_year = '1234'
+
+      expect(described_class.in_same_release_group?(torrent1, torrent2)).to be false
+    end
+
+    it 'returns false when remaster title is not equal' do
+      torrent2.remaster_title = '1234'
+
+      expect(described_class.in_same_release_group?(torrent1, torrent2)).to be false
+    end
+
+    it 'returns false when remaster record label is not equal' do
+      torrent2.remaster_record_label = '1234'
+
+      expect(described_class.in_same_release_group?(torrent1, torrent2)).to be false
+    end
+
+    it 'returns false when remaster catalogue number is not equal' do
+      torrent2.remaster_catalogue_number = '1234'
+
+      expect(described_class.in_same_release_group?(torrent1, torrent2)).to be false
+    end
+  end
 end
