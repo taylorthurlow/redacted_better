@@ -28,6 +28,7 @@ Gem::Specification.new do |s|
   s.add_dependency('tty-prompt', '~> 0.18')
   s.add_dependency('tty-spinner', '~> 0.9')
 
+  s.add_development_dependency('webmock', '~> 3.5')
   s.add_development_dependency('factory_bot', '~> 4.11')
   s.add_development_dependency('guard', '~> 2.15')
   s.add_development_dependency('guard-rspec', '~> 4.7')

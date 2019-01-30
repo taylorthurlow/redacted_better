@@ -1,6 +1,8 @@
+require 'fileutils'
+
 require 'factory_bot'
 require 'simplecov'
-require 'fileutils'
+require 'webmock/rspec'
 
 unless ENV['NO_COVERAGE']
   SimpleCov.start do
