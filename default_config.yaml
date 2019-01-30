@@ -1,8 +1,8 @@
 # Default config file, created at 2019-01-23 20:20:51 -0800
 
 # Your Redacted username and password
-username: frizkie
-password: ThJ-PdE-6PU-NPy
+username: your_username
+password: your_password
 
 # Many FLAC torrents on Redacted marked as 16-bit are actually 24-bit, mostly
 # coming from Bandcamp, which does not make a distinction on their download
