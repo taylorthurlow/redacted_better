@@ -76,3 +76,6 @@ Style/GuardClause:
 
 Style/GlobalVars:
   Enabled: false
+
+Style/ClassVars:
+  Enabled: false
