@@ -31,10 +31,6 @@ class Request
     @@last_request_time = Time.now.to_f
   end
 
-  def self.seconds_since_last_request
-    Time.now.to_f - @@last_request_time
-  end
-
   # these headers are generally applicable to any requests being made by
   # redacted_better, whether they are JSON API requests or just requests for
   # HTML page contents.
@@ -58,5 +54,9 @@ class Request
       'Accept-Language' => 'en-US,en;q=0.8',
       'Accept-Charset' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3'
     ).merge(params)
+  end
+
+  private_class_method def self.seconds_since_last_request
+    Time.now.to_f - @@last_request_time
   end
 end
