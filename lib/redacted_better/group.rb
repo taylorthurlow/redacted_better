@@ -28,13 +28,6 @@ class Group
     }]
   end
 
-  # Given a torrent in a release group, find all torrents in the group which
-  # are in the same release group. The returned list will also include the
-  # torrent used to identify the release group.
-  def release_group_torrents(torrent)
-    torrents.select { |t| Torrent.in_same_release_group?(t, torrent) }
-  end
-
   def formats_missing(torrent)
     present = release_group_torrents(torrent).map { |t| [t.format, t.encoding] }
 
@@ -42,5 +35,14 @@ class Group
            .values
            .map(&:values)
            .reject { |f| present.include? f }
+  end
+
+  private
+
+  # Given a torrent in a release group, find all torrents in the group which
+  # are in the same release group. The returned list will also include the
+  # torrent used to identify the release group.
+  def release_group_torrents(torrent)
+    torrents.select { |t| Torrent.in_same_release_group?(t, torrent) }
   end
 end

@@ -36,5 +36,11 @@ FactoryBot.define do
             'username' => username
           }, group)
     end
+
+    after(:create) do |torrent, evaluator|
+      if evaluator.group
+        torrent.group.torrents << torrent
+      end
+    end
   end
 end
