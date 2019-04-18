@@ -20,7 +20,7 @@ class Account
       Log.info("Logging in as #{@username}... ", newline: false)
 
       conn = Faraday.new(url: "https://redacted.ch/")
-      response = conn.post "login.php", username: @username, password: @password
+      response = conn.post("login.php", username: @username, password: @password)
 
       case response.status
       when 302
@@ -66,6 +66,6 @@ class Account
   end
 
   def prompt_password
-    TTY::Prompt.new.ask("Redacted password?", required: true)
+    TTY::Prompt.new.mask("Redacted password?", required: true)
   end
 end
