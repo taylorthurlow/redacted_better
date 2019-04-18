@@ -1,32 +1,32 @@
-require 'pry-byebug'
+require "pry-byebug"
 
-require 'find'
-require 'json'
+require "find"
+require "json"
 
-require 'flacinfo'
-require 'htmlentities'
-require 'mechanize'
+require "flacinfo"
+require "htmlentities"
+require "mechanize"
 
-require 'faraday'
-require 'pastel'
-require 'require_all'
-require 'slop'
-require 'tty-config'
-require 'tty-file'
-require 'tty-prompt'
-require 'tty-spinner'
+require "faraday"
+require "pastel"
+require "require_all"
+require "slop"
+require "tty-config"
+require "tty-file"
+require "tty-prompt"
+require "tty-spinner"
 
-require_rel 'redacted_better'
+require_rel "redacted_better"
 
 class RedactedBetter
   def initialize
     $opts = Slop.parse do |o|
-      o.string '-c', '--config',   'path to an alternate config file'
-      o.bool   '-q', '--quiet',    'only print to STDOUT when errors occur'
-      o.string '-u', '--username', 'your redacted username'
-      o.string '-p', '--password', 'your redacted password'
-      o.bool   '-h', '--help',     'print help'
-      o.on     '-v', '--version',  'print the version' do
+      o.string "-c", "--config", "path to an alternate config file"
+      o.bool "-q", "--quiet", "only print to STDOUT when errors occur"
+      o.string "-u", "--username", "your redacted username"
+      o.string "-p", "--password", "your redacted password"
+      o.bool "-h", "--help", "print help"
+      o.on "-v", "--version", "print the version" do
         puts RedactedBetter::VERSION
         exit
       end
@@ -43,12 +43,12 @@ class RedactedBetter
     $api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
 
     snatches = $api.all_snatches
-    Log.info('')
+    Log.info("")
     snatches.each do |snatch|
       next unless (info = $api.group_info(snatch[:group_id]))
 
-      group = Group.new(info['group'])
-      info['torrents'].each do |torrent_hash|
+      group = Group.new(info["group"])
+      info["torrents"].each do |torrent_hash|
         group.torrents << Torrent.new(torrent_hash, group)
       end
 
@@ -59,7 +59,7 @@ class RedactedBetter
       else
         Log.warning("Unable to find torrent #{snatch[:torrent_id]} in group #{snatch[:group_id]}.")
       end
-      Log.info('')
+      Log.info("")
     end
   end
 
@@ -81,16 +81,16 @@ class RedactedBetter
     end
 
     if torrent.any_multichannel?
-      Log.warning('  Torrent is multichannel, skipping.')
+      Log.warning("  Torrent is multichannel, skipping.")
       return
     end
 
     fixed_24bit = false
     if torrent.mislabeled_24bit?
       if $config.fetch(:fix_mislabeled_24bit)
-        Log.warning('  Skipping fix of mislabeled 24-bit torrent.')
+        Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
       else
-        fixed_24bit = $api.set_torrent_24bit(torrent['id'])
+        fixed_24bit = $api.set_torrent_24bit(torrent["id"])
       end
     end
 
@@ -99,7 +99,7 @@ class RedactedBetter
 
     tags_results = torrent.check_valid_tags
     unless tags_results[:valid]
-      Log.error('  Found invalid tags:')
+      Log.error("  Found invalid tags:")
       tags_results[:errors].each do |file, message|
         Log.error("    #{file} - #{message}")
       end
@@ -107,11 +107,11 @@ class RedactedBetter
       return
     end
 
-    spinners = TTY::Spinner::Multi.new('[:spinner] Processing missing formats:')
+    spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
     formats_missing.each do |f, e|
       spinners.register("[:spinner] #{f} #{e}") do |sp|
         handle_missing_format(torrent, f, e, fixed_24bit, sp)
-        sp.success(Pastel.new.green('done.'))
+        sp.success(Pastel.new.green("done."))
       end
     end
 

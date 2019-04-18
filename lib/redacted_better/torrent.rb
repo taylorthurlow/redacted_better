@@ -5,18 +5,18 @@ class Torrent
 
   def initialize(data_hash, group)
     @group = group
-    @id = data_hash['id']
-    @media = data_hash['media']
-    @format = data_hash['format']
-    @encoding = data_hash['encoding']
-    @remastered = data_hash['remastered']
-    @remaster_year = data_hash['remasterYear']
-    @remaster_title = data_hash['remasterTitle']
-    @remaster_record_label = data_hash['remasterRecordLabel']
-    @remaster_catalogue_number = data_hash['remasterCatalogueNumber']
-    @file_path = data_hash['filePath']
-    @file_list = Torrent.parse_file_list(data_hash['fileList'],
-                                         data_hash['filePath'])
+    @id = data_hash["id"]
+    @media = data_hash["media"]
+    @format = data_hash["format"]
+    @encoding = data_hash["encoding"]
+    @remastered = data_hash["remastered"]
+    @remaster_year = data_hash["remasterYear"]
+    @remaster_title = data_hash["remasterTitle"]
+    @remaster_record_label = data_hash["remasterRecordLabel"]
+    @remaster_catalogue_number = data_hash["remasterCatalogueNumber"]
+    @file_path = data_hash["filePath"]
+    @file_list = Torrent.parse_file_list(data_hash["fileList"],
+                                         data_hash["filePath"])
   end
 
   def properly_contained?
@@ -25,12 +25,12 @@ class Torrent
 
   def on_disk?(flacs_only: false)
     @file_list.all? do |f|
-      File.exist?(f) || (flacs_only && !File.extname(f).casecmp('.flac').zero?)
+      File.exist?(f) || (flacs_only && !File.extname(f).casecmp(".flac").zero?)
     end
   end
 
   def flacs
-    @file_list.select { |f| File.extname(f).casecmp('.flac').zero? }
+    @file_list.select { |f| File.extname(f).casecmp(".flac").zero? }
   end
 
   def all_24bit?
@@ -38,7 +38,7 @@ class Torrent
   end
 
   def mislabeled_24bit?
-    all_24bit? && @encoding != '24bit Lossless'
+    all_24bit? && @encoding != "24bit Lossless"
   end
 
   def any_multichannel?
@@ -71,22 +71,22 @@ class Torrent
 
     {
       valid: results.all? { |r| r[:valid] },
-      errors: results.map { |r| r[:errors] }.flatten
+      errors: results.map { |r| r[:errors] }.flatten,
     }
   end
 
   def format_shorthand
     case @format
-    when 'FLAC'
-      @encoding.include?('24') ? 'FLAC24' : 'FLAC'
-    when 'MP3'
+    when "FLAC"
+      @encoding.include?("24") ? "FLAC24" : "FLAC"
+    when "MP3"
       case @encoding
-      when '320'
-        '320'
-      when 'V0 (VBR)'
-        'MP3v0'
-      when 'V2 (VBR)'
-        'MP3v2'
+      when "320"
+        "320"
+      when "V0 (VBR)"
+        "MP3v0"
+      when "V2 (VBR)"
+        "MP3v2"
       end
     else
       "#{@format} #{@encoding}"
@@ -103,10 +103,10 @@ class Torrent
 
   def self.formats_accepted
     {
-      'FLAC' => { format: 'FLAC', encoding: 'Lossless' },
-      '320' => { format: 'MP3', encoding: '320' },
-      'V0' => { format: 'MP3', encoding: 'V0 (VBR)' }
-      # 'V2' => { format: 'MP3', encoding: 'V2 (VBR)' }
+      "FLAC" => { format: "FLAC", encoding: "Lossless" },
+      "320" => { format: "MP3", encoding: "320" },
+      "V0" => { format: "MP3", encoding: "V0 (VBR)" },
+    # 'V2' => { format: 'MP3', encoding: 'V2 (VBR)' }
     }
   end
 
@@ -120,10 +120,10 @@ class Torrent
 
   def self.valid_encoding
     [
-      '192', '256', '320',
-      'V0 (VBR)', 'V1 (VBR)', 'V2 (VBR)', 'APS (VBR)', 'APX (VBR)',
-      'Lossless', '24bit Lossless',
-      'Other'
+      "192", "256", "320",
+      "V0 (VBR)", "V1 (VBR)", "V2 (VBR)", "APS (VBR)", "APX (VBR)",
+      "Lossless", "24bit Lossless",
+      "Other",
     ]
   end
 
@@ -131,7 +131,7 @@ class Torrent
 
   def self.parse_file_list(raw_list, root_path)
     path = File.join($config.fetch(:directories, :download), root_path)
-    raw_list.gsub(/\|\|\|/, '')
+    raw_list.gsub(/\|\|\|/, "")
             .split(/\{\{\{\d+\}\}\}/)
             .map { |p| File.join(path, p) }
   end

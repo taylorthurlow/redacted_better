@@ -9,9 +9,9 @@ FactoryBot.define do
       encoding { Torrent.valid_encoding.sample }
       remastered { false }
       remaster_year { remastered ? 0 : rand(1950..2020) }
-      remaster_title { remastered ? '' : SecureRandom.hex(5) }
-      remaster_record_label { remastered ? '' : SecureRandom.hex(5) }
-      remaster_catalogue_number { remastered ? '' : SecureRandom.hex(5) }
+      remaster_title { remastered ? "" : SecureRandom.hex(5) }
+      remaster_record_label { remastered ? "" : SecureRandom.hex(5) }
+      remaster_catalogue_number { remastered ? "" : SecureRandom.hex(5) }
       file_path { SecureRandom.hex(5) }
       file_list { generate_file_list }
       user_id { rand(1..1_000_000) }
@@ -21,19 +21,19 @@ FactoryBot.define do
 
     initialize_with do
       new({
-            'id' => id,
-            'media' => media,
-            'format' => format,
-            'encoding' => encoding,
-            'remastered' => remastered,
-            'remasterYear' => remaster_year,
-            'remasterTitle' => remaster_title,
-            'remasterRecordLabel' => remaster_record_label,
-            'remasterCatalogueNumber' => remaster_catalogue_number,
-            'filePath' => file_path,
-            'fileList' => file_list,
-            'userId' => user_id,
-            'username' => username
+            "id" => id,
+            "media" => media,
+            "format" => format,
+            "encoding" => encoding,
+            "remastered" => remastered,
+            "remasterYear" => remaster_year,
+            "remasterTitle" => remaster_title,
+            "remasterRecordLabel" => remaster_record_label,
+            "remasterCatalogueNumber" => remaster_catalogue_number,
+            "filePath" => file_path,
+            "fileList" => file_list,
+            "userId" => user_id,
+            "username" => username,
           }, group)
     end
 

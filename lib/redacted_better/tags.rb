@@ -2,7 +2,7 @@ class Tags
   def self.valid_tags?(file)
     errors = []
     tags = FlacInfo.new(file).tags
-    required_tags = ['ARTIST', 'ALBUM', 'TITLE', 'TRACKNUMBER']
+    required_tags = ["ARTIST", "ALBUM", "TITLE", "TRACKNUMBER"]
 
     required_tags.each do |tag_name|
       basename = File.basename(file)
@@ -17,8 +17,8 @@ class Tags
         next
       end
 
-      if tag_name == 'TRACKNUMBER' && !valid_track_tag?(tags['TRACKNUMBER'])
-        errors << [basename, 'Malformed track number tag.']
+      if tag_name == "TRACKNUMBER" && !valid_track_tag?(tags["TRACKNUMBER"])
+        errors << [basename, "Malformed track number tag."]
         next
       end
     end
@@ -27,6 +27,6 @@ class Tags
   end
 
   private_class_method def self.valid_track_tag?(tag)
-    /^[A-Za-z]?\d+$/ =~ tag
-  end
+                         /^[A-Za-z]?\d+$/ =~ tag
+                       end
 end

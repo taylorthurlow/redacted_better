@@ -5,11 +5,11 @@ class Request
   def self.send_request(action:, cookie:, params: {})
     wait_for_request
 
-    response = Faraday.new(url: 'https://redacted.ch/').get do |request|
+    response = Faraday.new(url: "https://redacted.ch/").get do |request|
       url = "ajax.php?action=#{action}"
       params.each { |p, v| url += "&#{p}=#{v}" }
       request.url url
-      request.headers = action_headers('Cookie' => cookie)
+      request.headers = action_headers("Cookie" => cookie)
     end
 
     notify_request_sent
@@ -18,8 +18,8 @@ class Request
 
     {
       code: response.status,
-      status: data['status'],
-      response: data['response']
+      status: data["status"],
+      response: data["response"],
     }
   end
 
@@ -36,8 +36,8 @@ class Request
   # HTML page contents.
   def self.headers(params = {})
     {
-      'User-Agent' => "redacted_better/#{RedactedBetter::VERSION} "\
-                      '(github.com/taylorthurlow/redacted_better)'
+      "User-Agent" => "redacted_better/#{RedactedBetter::VERSION} " \
+                      "(github.com/taylorthurlow/redacted_better)",
     }.merge(params)
   end
 
@@ -47,16 +47,16 @@ class Request
   # "torrents.php".
   def self.action_headers(params = {})
     headers.merge(
-      'Cache-Control' => 'max-age=0',
-      'Connection' => 'keep-alive',
-      'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Encoding' => 'gzip,deflate,sdch',
-      'Accept-Language' => 'en-US,en;q=0.8',
-      'Accept-Charset' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.3'
+      "Cache-Control" => "max-age=0",
+      "Connection" => "keep-alive",
+      "Accept" => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Encoding" => "gzip,deflate,sdch",
+      "Accept-Language" => "en-US,en;q=0.8",
+      "Accept-Charset" => "ISO-8859-1,utf-8;q=0.7,*;q=0.3",
     ).merge(params)
   end
 
   private_class_method def self.seconds_since_last_request
-    Time.now.to_f - @@last_request_time
-  end
+                         Time.now.to_f - @@last_request_time
+                       end
 end

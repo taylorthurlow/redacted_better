@@ -2,8 +2,8 @@ def generate_artists(count = 1)
   artists = []
   count.times do
     artists << {
-      'id' => rand(1..1_000_000),
-      'name' => SecureRandom.hex(5)
+      "id" => rand(1..1_000_000),
+      "name" => SecureRandom.hex(5),
     }
   end
 
@@ -24,11 +24,11 @@ FactoryBot.define do
 
     initialize_with do
       new(
-        'id' => id,
-        'name' => name,
-        'musicInfo' => { 'artists' => artists },
-        'year' => year,
-        'recordLabel' => record_label
+        "id" => id,
+        "name" => name,
+        "musicInfo" => { "artists" => artists },
+        "year" => year,
+        "recordLabel" => record_label,
       )
     end
   end

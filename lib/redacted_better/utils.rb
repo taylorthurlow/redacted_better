@@ -1,7 +1,7 @@
 class Utils
   def self.find_flac_recursively(directory)
     Find.find(directory).select do |f|
-      File.file?(f) && File.extname(f) == '.flac'
+      File.file?(f) && File.extname(f) == ".flac"
     end
   end
 
