@@ -110,17 +110,12 @@ class RedactedBetter
     spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
     formats_missing.each do |f, e|
       spinners.register("[:spinner] #{f} #{e}") do |sp|
-        handle_missing_format(torrent, f, e, fixed_24bit, sp)
+        Transcode.transcode(torrent, f, e, fixed_24bit, sp)
         sp.success(Pastel.new.green("done."))
       end
     end
 
     spinners.auto_spin
-  end
-
-  def handle_missing_format(torrent, format, encoding, fixed_24bit, spinner)
-    # tmp_dir = Dir.mktmpdir
-    # transcode_dir = Transcode.transcode()
   end
 
   def handle_help_opt

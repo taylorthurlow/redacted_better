@@ -1,7 +1,7 @@
 class Torrent
   attr_accessor :id, :media, :format, :encoding, :remastered, :remaster_year,
-                :remaster_title, :remaster_record_label, :remaster_catalogue_number,
-                :file_list, :file_path, :group
+    :remaster_title, :remaster_record_label, :remaster_catalogue_number,
+    :file_list, :file_path, :group
 
   def initialize(data_hash, group)
     @group = group
@@ -54,7 +54,7 @@ class Torrent
   end
 
   def to_s
-    "#{@group.artist} - #{@group.name} (#{year}) [#{@media} #{format_shorthand}]"
+    build_string(@group.artist, @group.name, year, @media, format_shorthand)
   end
 
   def url
@@ -76,21 +76,7 @@ class Torrent
   end
 
   def format_shorthand
-    case @format
-    when "FLAC"
-      @encoding.include?("24") ? "FLAC24" : "FLAC"
-    when "MP3"
-      case @encoding
-      when "320"
-        "320"
-      when "V0 (VBR)"
-        "MP3v0"
-      when "V2 (VBR)"
-        "MP3v2"
-      end
-    else
-      "#{@format} #{@encoding}"
-    end
+    build_format(@format, @encoding)
   end
 
   def self.in_same_release_group?(t1, t2)
@@ -106,7 +92,6 @@ class Torrent
       "FLAC" => { format: "FLAC", encoding: "Lossless" },
       "320" => { format: "MP3", encoding: "320" },
       "V0" => { format: "MP3", encoding: "V0 (VBR)" },
-    # 'V2' => { format: 'MP3', encoding: 'V2 (VBR)' }
     }
   end
 
@@ -125,6 +110,28 @@ class Torrent
       "Lossless", "24bit Lossless",
       "Other",
     ]
+  end
+
+  def self.build_format(format, encoding)
+    case format
+    when "FLAC"
+      encoding.include?("24") ? "FLAC24" : "FLAC"
+    when "MP3"
+      case encoding
+      when "320"
+        "320"
+      when "V0 (VBR)"
+        "MP3v0"
+      when "V2 (VBR)"
+        "MP3v2"
+      end
+    else
+      "#{format} #{encoding}"
+    end
+  end
+
+  def self.build_string(artist, name, year, media, format)
+    "#{artist} - #{name} (#{year}) [#{media} #{format}]"
   end
 
   private

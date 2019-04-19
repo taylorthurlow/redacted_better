@@ -15,3 +15,8 @@ directories:
   download: /media/data/torrents/music
   output: /media/data/torrents/redacted_upload
   torrents: /media/data/torrents/redacted_upload/torrent_files
+
+# Software executables
+executables:
+  sox: /usr/local/bin/sox
+  lame: /usr/local/bin/lame
