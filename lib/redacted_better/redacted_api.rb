@@ -36,7 +36,7 @@ class RedactedAPI
       page += 1
     end
 
-    spinner.stop(Pastel.new.green("done!"))
+    spinner.success(Pastel.new.green("done!"))
 
     result
   end
