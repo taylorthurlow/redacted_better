@@ -5,7 +5,7 @@ class Transcode
     "320" => { enc: "lame", ext: "mp3", opts: "-h -b 320 --ignore-tag-errors" },
     "V0 (VBR)" => { enc: "lame", ext: "mp3", opts: "-V 0 --vbr-new --ignore-tag-errors" },
     "V2 (VBR)" => { enc: "lame", ext: "mp3", opts: "-V 2 --vbr-new --ignore-tag-errors" },
-    "Lossless" => { enc: "flac", ext: "flac", opts: "--best" }
+    "Lossless" => { enc: "flac", ext: "flac", opts: "--best" },
   }
 
   def self.file_is_24bit?(path)
@@ -30,7 +30,7 @@ class Transcode
 
     # Process each file
     torrent.flacs.each do |file_path|
-      spinner.update(text: File.basename(file_path)})
+      spinner.update(text: File.basename(file_path))
       new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
       destination_file = File.join(temp_torrent_dir, new_file_name)
       exit_code, errors = transcode_file(format, encoding, file_path, destination_file)
