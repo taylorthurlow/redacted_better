@@ -1,0 +1,23 @@
+{
+  "status": "success",
+  "response": {
+    "username": "frizkie",
+    "id": 4517,
+    "authkey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "passkey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "notifications": {
+      "messages": 0,
+      "notifications": 0,
+      "newAnnouncement": false,
+      "newBlog": false,
+      "newSubscriptions": false
+    },
+    "userstats": {
+      "uploaded": 23035324179,
+      "downloaded": 14847506482,
+      "ratio": 1.55,
+      "requiredratio": 0,
+      "class": "Member"
+    }
+  }
+}

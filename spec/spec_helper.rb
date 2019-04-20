@@ -38,6 +38,10 @@ RSpec.configure do |config|
     $stdout = original_stdout
   end
 
+  config.before(:each) do
+    stub_request(:any, /redacted.ch/).to_rack(FakeRedacted)
+  end
+
   config.before(:suite) do
     FactoryBot.find_definitions
 
@@ -75,24 +79,10 @@ def generate_release_group
 end
 
 def generate_file_list
-  # 01 -  Bluejuice - Video Games.flac{{{20972757}}}|||
+  # 01 - Bluejuice - Video Games.flac{{{20972757}}}|||
   track = rand(1..100)
   artist = SecureRandom.hex(5)
   title = SecureRandom.hex(5)
   id = rand(1_000..1_000_000)
   "#{track} - #{artist} - #{title}.flac{{{#{id}}}}|||"
 end
-
-# def instance_with_configuration(described_class, config_hash)
-#   config = instance_double('config', component_config: config_hash)
-#   motd = instance_double('motd', config: config)
-#   described_class.new(motd)
-# end
-
-# def stub_system_call(subject, with: nil, returns: command_output(subject.class))
-#   if with
-#     allow(subject).to receive(:`).with(with).and_return(returns)
-#   else
-#     allow(subject).to receive(:`).and_return(returns)
-#   end
-# end

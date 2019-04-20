@@ -1,0 +1,51 @@
+{
+    "status": "success",
+    "response": {
+        "username": "dr4g0n",
+        "avatar": "http://v0lu.me/rubadubdub.png",
+        "isFriend": false,
+        "profileText": "",
+        "stats": {
+            "joinedDate": "2007-10-28 14:26:12",
+            "lastAccess": "2012-08-09 00:17:52",
+            "uploaded": 585564424629,
+            "downloaded": 177461229738,
+            "ratio": 3.3,
+            "requiredRatio": 0.6
+        },
+        "ranks": {
+            "uploaded": 98,
+            "downloaded": 95,
+            "uploads": 85,
+            "requests": 0,
+            "bounty": 79,
+            "posts": 98,
+            "artists": 0,
+            "overall": 85
+        },
+        "personal": {
+            "class": "VIP",
+            "paranoia": 0,
+            "paranoiaText": "Off",
+            "donor": true,
+            "warned": false,
+            "enabled": true,
+            "passkey": "redacted",
+        },
+        "community": {
+            "posts": 863,
+            "torrentComments": 13,
+            "collagesStarted": 0,
+            "collagesContrib": 0,
+            "requestsFilled": 0,
+            "requestsVoted": 13,
+            "perfectFlacs": 2,
+            "uploaded": 29,
+            "groups": 14,
+            "seeding": 309,
+            "leeching": 0,
+            "snatched": 678,
+            "invited": 7
+        }
+    }
+}
