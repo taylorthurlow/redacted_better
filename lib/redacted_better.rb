@@ -109,8 +109,8 @@ class RedactedBetter
 
     spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
     formats_missing.each do |f, e|
-      spinners.register("[:spinner] #{f} #{e}") do |sp|
-        Transcode.transcode(torrent, f, e, fixed_24bit, sp)
+      spinners.register("[:spinner] #{f} #{e}:text") do |sp|
+        Transcode.transcode(torrent, f, e, sp)
         sp.success(Pastel.new.green("done."))
       end
     end

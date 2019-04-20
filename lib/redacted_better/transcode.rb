@@ -1,6 +1,13 @@
 require "fileutils"
 
 class Transcode
+  ENCODERS = {
+    "320" => { enc: "lame", ext: "mp3", opts: "-h -b 320 --ignore-tag-errors" },
+    "V0 (VBR)" => { enc: "lame", ext: "mp3", opts: "-V 0 --vbr-new --ignore-tag-errors" },
+    "V2 (VBR)" => { enc: "lame", ext: "mp3", opts: "-V 2 --vbr-new --ignore-tag-errors" },
+    "Lossless" => { enc: "flac", ext: "flac", opts: "--best" }
+  }
+
   def self.file_is_24bit?(path)
     FlacInfo.new(path).streaminfo["bits_per_sample"] > 16
   end
@@ -9,7 +16,7 @@ class Transcode
     FlacInfo.new(path).streaminfo["channels"] > 2
   end
 
-  def self.transcode(torrent, format, encoding, fixed_24bit, spinner)
+  def self.transcode(torrent, format, encoding, spinner)
     # Determine the new torrent directory name
     format_shorthand = Torrent.build_format(format, encoding)
     torrent_name = Torrent.build_string(torrent.group.artist,
@@ -22,32 +29,20 @@ class Transcode
     FileUtils.mkdir_p(temp_torrent_dir)
 
     # Process each file
-    flac_files = torrent.flacs
-    errors = {}
+    torrent.flacs.each do |file_path|
+      spinner.update(text: File.basename(file_path)})
+      new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
+      destination_file = File.join(temp_torrent_dir, new_file_name)
+      exit_code, errors = transcode_file(format, encoding, file_path, destination_file)
 
-    flac_files.each do |flac|
-      flacinfo = FlacInfo.new(flac)
-
-      required_sample_rate, sample_rate_errors = check_sample_rate(flacinfo)
-      multichannel_errors = check_channels(flacinfo)
-
-      errors[flac] = (sample_rate_errors + multichannel_errors).flatten
-      next if errors[flac].any?
-
-      # If we determined that we need to downsample, use SoX to do so
-      if required_sample_rate
-        downsampled_temp_dir = File.join(temp_dir, 'downsampled_files')
-        FileUtils.mkdir_p(downsampled_temp_dir)
-        new_flac = File.join(downsampled_temp_dir, File.basename(flac))
-        sox_executable = $config.fetch(:executables, :sox) || 'sox'
-        `#{sox_executable} #{flac} -qG -b 16 #{new_flac} -v -L #{required_sample_rate} dither`
+      unless exit_code.zero?
+        spinner.error("(transcode failed with exit code #{exit_code})")
+        return
       end
 
-      case format
-      when "FLAC"
-
-      when "MP3"
-
+      if errors.any?
+        spinner.error(errors.join(", "))
+        return
       end
     end
 
@@ -55,12 +50,64 @@ class Transcode
     # temp directory into it
     output_dir = $config.fetch(:directories, :output)
     FileUtils.cp_r(File.join(temp_torrent_dir), output_dir)
+
+    spinner.update(text: "")
+    spinner.success(" - done!")
   ensure
-    FileUtils.remove_dir(temp_dir) if temp_dir
-    FileUtils.remove_dir(torrent_dir) if torrent_dir
+    FileUtils.remove_dir(temp_dir, true) if temp_dir
+    FileUtils.remove_dir(temp_torrent_dir, true) if temp_torrent_dir
   end
 
   private
+
+  # Transcode a single FLAC file to a specific destination
+  def self.transcode_file(format, encoding, source, destination)
+    # Check for any problems with the source file
+    flacinfo = FlacInfo.new(source)
+    required_sample_rate, sample_rate_errors = check_sample_rate(flacinfo)
+    multichannel_errors = check_channels(flacinfo)
+    errors = (sample_rate_errors + multichannel_errors).flatten
+
+    cmds = transcode_commands(format, encoding, source, destination, required_sample_rate)
+    `#{cmds.join(" | ")}`
+
+    [$?.exitstatus, errors]
+  end
+
+  # Builds a list of steps required to transcode a FLAC into the specified
+  # format, performing resampling if required
+  def self.transcode_commands(format, encoding, source, destination, sample_rate)
+    # Set up executable paths
+    sox_exe = $config.fetch(:executables, :sox) || "sox"
+    flac_exe = $config.fetch(:executables, :flac) || "flac"
+    lame_exe = $config.fetch(:executables, :lame) || "lame"
+
+    # If we're just resampling a FLAC to another FLAC, just use SoX to do that,
+    # and skip the rest of the transcode process
+    if format == "FLAC" && sample_rate
+      return ["#{sox_exe} \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
+    end
+
+    # If we determined that we need to downsample, use SoX to do so, otherwise
+    # just decode to WAV
+    flac_decoder = if sample_rate
+                     "#{sox_exe} \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
+                   else
+                     # Decodes FLAC to WAV, writing to STDOUT
+                     "#{flac_exe} -dcs -- \"#{source}\""
+                   end
+
+    transcode_steps = [flac_decoder]
+
+    case ENCODERS[encoding][:enc]
+    when "lame"
+      transcode_steps << "#{lame_exe} --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
+    when "flac"
+      transcode_steps << "#{flac_exe} #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
+    end
+
+    transcode_steps
+  end
 
   # Determine if we need to resample the FLAC, this is so we ensure we only
   # have 44.1kHz or 48kHz output

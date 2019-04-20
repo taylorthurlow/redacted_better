@@ -54,7 +54,7 @@ class Torrent
   end
 
   def to_s
-    build_string(@group.artist, @group.name, year, @media, format_shorthand)
+    Torrent.build_string(@group.artist, @group.name, year, @media, format_shorthand)
   end
 
   def url
@@ -76,7 +76,7 @@ class Torrent
   end
 
   def format_shorthand
-    build_format(@format, @encoding)
+    Torrent.build_format(@format, @encoding)
   end
 
   def self.in_same_release_group?(t1, t2)
