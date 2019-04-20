@@ -43,8 +43,23 @@ Style/BlockDelimiters:
   Exclude:
     - 'spec/**/*'
 
+Style/GlobalVars:
+  Enabled: false
+
+Style/ClassVars:
+  Enabled: false
+
 Style/SymbolArray:
   Enabled: false
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
 
 Style/WordArray:
   Enabled: false
