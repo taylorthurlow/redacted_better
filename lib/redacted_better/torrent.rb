@@ -134,8 +134,6 @@ class Torrent
     "#{artist} - #{name} (#{year}) [#{media} #{format}]"
   end
 
-  private
-
   def self.parse_file_list(raw_list, root_path)
     path = File.join($config.fetch(:directories, :download), root_path)
     raw_list.gsub(/\|\|\|/, "")

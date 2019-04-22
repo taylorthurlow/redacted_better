@@ -41,7 +41,7 @@ class RedactedAPI
     result
   end
 
-  def set_torrent_24bit(torrent)
+  def mark_torrent_24bit(torrent_id)
     spinner = TTY::Spinner.new("  [:spinner] Fixing mislabeled 24-bit torrent...", format: :dots_4)
     spinner.auto_spin
 

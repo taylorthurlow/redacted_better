@@ -69,9 +69,6 @@ class RedactedBetter
     Log.info("Release found: #{torrent}")
     Log.info("  #{torrent.url}")
 
-    dl_dir = $config.fetch(:directories, :download)
-    torrent_path = File.join(dl_dir, torrent.file_path)
-
     missing_files = torrent.missing_files
 
     if missing_files.any?
@@ -85,12 +82,11 @@ class RedactedBetter
       return
     end
 
-    fixed_24bit = false
     if torrent.mislabeled_24bit?
       if $config.fetch(:fix_mislabeled_24bit)
         Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
       else
-        fixed_24bit = $api.set_torrent_24bit(torrent["id"])
+        $api.mark_torrent_24bit(torrent["id"])
       end
     end
 

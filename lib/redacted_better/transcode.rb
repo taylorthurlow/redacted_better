@@ -37,12 +37,12 @@ class Transcode
 
       unless exit_code.zero?
         spinner.error("(transcode failed with exit code #{exit_code})")
-        return
+        return false
       end
 
       if errors.any?
         spinner.error(errors.join(", "))
-        return
+        return false
       end
     end
 
@@ -53,12 +53,12 @@ class Transcode
 
     spinner.update(text: "")
     spinner.success(" - done!")
+
+    true
   ensure
     FileUtils.remove_dir(temp_dir, true) if temp_dir
     FileUtils.remove_dir(temp_torrent_dir, true) if temp_torrent_dir
   end
-
-  private
 
   # Transcode a single FLAC file to a specific destination
   def self.transcode_file(format, encoding, source, destination)
