@@ -30,7 +30,7 @@ class Transcode
 
     # Process each file
     torrent.flacs.each do |file_path|
-      spinner.update(text: File.basename(file_path))
+      spinner.update(text: " - " + File.basename(file_path))
       new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
       destination_file = File.join(temp_torrent_dir, new_file_name)
       exit_code, errors = transcode_file(format, encoding, file_path, destination_file)
@@ -117,11 +117,11 @@ class Transcode
     sample_rate = flacinfo.streaminfo["samplerate"]
     bit_depth = flacinfo.streaminfo["bits_per_sample"]
 
-    if sample_rate > 48000 || bit_depth > 16
-      required_sample_rate = if sample_rate % 44100 == 0
-                               44100
-                             elsif sample_rate % 48000 == 0
-                               4800
+    if sample_rate > 48_000 || bit_depth > 16
+      required_sample_rate = if sample_rate % 44_100 == 0
+                               44_100
+                             elsif sample_rate % 48_000 == 0
+                               48_000
                              else
                                errors << "#{sample_rate}Hz sample rate unsupported"
                              end

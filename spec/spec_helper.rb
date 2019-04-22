@@ -60,7 +60,8 @@ FactoryBot::SyntaxRunner.class_eval do
   include RSpec::Mocks::ExampleMethods
 end
 
-Dir[File.dirname(__FILE__) + "/matchers/**/*.rb"].each { |file| require file }
+Dir[File.dirname(__FILE__) + "/matchers/**/*.rb"].sort.each { |file| require file }
+Dir[File.dirname(__FILE__) + "/support/**/*.rb"].sort.each { |file| require file }
 
 #####
 # Helper methods
