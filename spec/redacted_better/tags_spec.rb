@@ -16,6 +16,19 @@ describe Tags do
       expect(described_class.valid_tags?("path")).to eq(valid: true, errors: [])
     end
 
+    context "when malformed" do
+      context "tracknumber tag" do
+        it "returns false" do
+          info = instance_double("FlacInfo", tags: valid_tags.merge("TRACKNUMBER" => "asdf"))
+          allow(FlacInfo).to receive(:new).and_return(info)
+
+          expect(described_class.valid_tags?("path")).to eq(
+            valid: false, errors: [["path", "Malformed track number tag."]],
+          )
+        end
+      end
+    end
+
     context "when missing" do
       context "the artist tag" do
         it "returns false" do
