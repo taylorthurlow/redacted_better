@@ -46,6 +46,9 @@ Style/BlockDelimiters:
   Exclude:
     - 'spec/**/*'
 
+Style/NumericPredicate:
+  Enabled: false
+
 Style/GlobalVars:
   Enabled: false
 
