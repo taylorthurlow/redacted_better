@@ -39,6 +39,9 @@ Metrics/LineLength:
 Documentation:
   Enabled: false
 
+Style/StringLiteralsInInterpolation:
+  Enabled: false
+
 Style/BlockDelimiters:
   Exclude:
     - 'spec/**/*'
