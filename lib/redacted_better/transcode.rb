@@ -64,19 +64,21 @@ class Transcode
   def self.transcode_file(format, encoding, source, destination)
     # Check for any problems with the source file
     flacinfo = FlacInfo.new(source)
-    required_sample_rate, sample_rate_errors = check_sample_rate(flacinfo)
+    resample_required, required_sample_rate, sample_rate_errors = check_sample_rate(flacinfo)
     multichannel_errors = check_channels(flacinfo)
     errors = (sample_rate_errors + multichannel_errors).flatten
 
-    cmds = transcode_commands(format, encoding, source, destination, required_sample_rate)
-    `#{cmds.join(" | ")}`
+    cmds = transcode_commands(format, encoding, source, destination, resample_required, required_sample_rate)
+    `#{cmds.join(" | ")}` unless errors.any?
 
     [$?.exitstatus, errors]
   end
 
+  private
+
   # Builds a list of steps required to transcode a FLAC into the specified
   # format, performing resampling if required
-  def self.transcode_commands(format, encoding, source, destination, sample_rate)
+  def self.transcode_commands(format, encoding, source, destination, resample_required, sample_rate)
     # Set up executable paths
     sox_exe = $config.fetch(:executables, :sox) || "sox"
     flac_exe = $config.fetch(:executables, :flac) || "flac"
@@ -84,13 +86,13 @@ class Transcode
 
     # If we're just resampling a FLAC to another FLAC, just use SoX to do that,
     # and skip the rest of the transcode process
-    if format == "FLAC" && sample_rate
+    if format == "FLAC" && resample_required
       return ["#{sox_exe} \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
     end
 
     # If we determined that we need to downsample, use SoX to do so, otherwise
     # just decode to WAV
-    flac_decoder = if sample_rate
+    flac_decoder = if resample_required
                      "#{sox_exe} \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
                    else
                      # Decodes FLAC to WAV, writing to STDOUT
@@ -117,7 +119,8 @@ class Transcode
     sample_rate = flacinfo.streaminfo["samplerate"]
     bit_depth = flacinfo.streaminfo["bits_per_sample"]
 
-    if sample_rate > 48_000 || bit_depth > 16
+    resample_required = sample_rate > 48_000 || bit_depth > 16
+    if resample_required
       required_sample_rate = if sample_rate % 44_100 == 0
                                44_100
                              elsif sample_rate % 48_000 == 0
@@ -127,7 +130,7 @@ class Transcode
                              end
     end
 
-    [required_sample_rate, errors]
+    [resample_required, required_sample_rate, errors]
   end
 
   # Reject any files which have more than 2 channels, multichannel releases are
