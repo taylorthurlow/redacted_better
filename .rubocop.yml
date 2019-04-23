@@ -85,6 +85,12 @@ Style/GuardClause:
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
+Lint/IneffectiveAccessModifier:
+  Enabled: false
+
+Lint/UselessAccessModifier:
+  Enabled: false
+
 ###############
 # RSpec Stuff #
 ###############
