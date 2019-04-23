@@ -1,5 +1,3 @@
-# Default config file, created at 2019-01-23 20:20:51 -0800
-
 # Your Redacted username and password
 username: your_username
 password: your_password
@@ -18,5 +16,6 @@ directories:
 
 # Software executables
 executables:
-  sox: /usr/local/bin/sox
-  lame: /usr/local/bin/lame
+  flac: # /usr/local/bin/flac
+  sox: # /usr/local/bin/sox
+  lame: # /usr/local/bin/lame
