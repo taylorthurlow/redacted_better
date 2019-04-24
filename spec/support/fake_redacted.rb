@@ -1,6 +1,8 @@
 require "sinatra/base"
 
 class FakeRedacted < Sinatra::Base
+  set :environment, :test
+
   post "/login.php" do
     status 302
     headers "Set-Cookie" => "session=asdf1234; path=/; secure; HttpOnly"
@@ -13,10 +15,6 @@ class FakeRedacted < Sinatra::Base
 
   get "/ajax.php" do
     action = params["action"]
-
-    unless ajax_action_parameters.key? action
-      raise "sent GET to /ajax.php without valid action parameter"
-    end
 
     missing_params = ajax_action_parameters[action].reject do |param|
       params[param.to_s]

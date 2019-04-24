@@ -12,39 +12,45 @@ class Account
   end
 
   def login
-    auth_success = false
-    until auth_success
-      @username ||= find_username
-      @password ||= find_password
+    @username ||= find_username
+    @password ||= find_password
 
-      Log.info("Logging in as #{@username}... ", newline: false)
+    Log.info("Logging in as #{@username}... ", newline: false)
 
-      conn = Faraday.new(url: "https://redacted.ch/")
-      response = conn.post("login.php", username: @username, password: @password)
+    conn = Faraday.new(url: "https://redacted.ch/")
+    response = conn.post("login.php", username: @username, password: @password)
 
-      case response.status
-      when 302
-        Log.success("success!")
-        auth_success = true
-        @cookie = /session=[^;]*/.match(response.headers["set-cookie"])[0]
-        set_user_info
-      when 200
-        Log.error("failure.")
-        @username = prompt_username
-        @password = prompt_password
-      else
-        Log.error("error code #{response.status}.")
-        return false
-      end
+    case response.status
+    when 302
+      handle_successful_login(response)
+      return true
+    when 200
+      handle_failed_login
+      return false
+    else
+      handle_errored_login(response.status)
+      return false
     end
-
-    true
   rescue Faraday::TimeoutError
-    Log.error("logging in timed out. Perhaps Redacted is down?")
+    Log.error("Logging in timed out. Perhaps Redacted is down?")
     false
   end
 
   private
+
+  def handle_successful_login(response)
+    Log.success("success!")
+    @cookie = /session=[^;]*/.match(response.headers["set-cookie"])[0]
+    set_user_info
+  end
+
+  def handle_failed_login
+    Log.error("failure.")
+  end
+
+  def handle_errored_login(code)
+    Log.error("error code #{code}.")
+  end
 
   def set_user_info
     response = Request.send_request(action: "index", cookie: @cookie)

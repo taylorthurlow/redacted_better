@@ -31,6 +31,7 @@ RSpec.configure do |config|
 
     $opts = { config: "default_config.yaml" }
     $config = Config.load_config
+    $quiet = true
   end
 
   config.after(:all) do

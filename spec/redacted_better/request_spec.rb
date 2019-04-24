@@ -2,24 +2,29 @@ require "spec_helper"
 
 describe Request do
   describe ".send_request" do
-    it "sends a request" do
-      # allow(described_class).to receive(:wait_for_request)
-      # query = { "action" => "the_action", "extra_param" => "value" }
-      # headers = { "Cookie" => "the_cookie" }
-      # body = { status: "success", response: "{}" }.to_json
+    context "when action is present" do
+      it "sends a request" do
+        result = described_class.send_request(
+          action: "index",
+          cookie: "the_cookie",
+          params: { "extra_param" => "value" },
+        )
 
-      # stub = stub_request(:get, "https://redacted.ch/ajax.php")
-      #   .with(query: query, headers: headers)
-      #   .to_return(body: body, status: 200)
+        expect(result[:code]).to eq 200
+        expect(result[:status]).to eq "success"
+      end
+    end
 
-      result = described_class.send_request(
-        action: "index",
-        cookie: "the_cookie",
-        params: { "extra_param" => "value" },
-      )
-
-      expect(result[:code]).to eq 200
-      expect(result[:status]).to eq "success"
+    context "when a parameter is missing" do
+      it "raises an exception" do
+        expect {
+          described_class.send_request(
+            # action "torrentgroup" expects an "id" parameter
+            action: "torrentgroup",
+            cookie: "the_cookie",
+          )
+        }.to raise_error("missing parameter(s): id")
+      end
     end
   end
 end

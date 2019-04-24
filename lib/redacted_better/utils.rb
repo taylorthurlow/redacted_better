@@ -1,10 +1,4 @@
 class Utils
-  def self.find_flac_recursively(directory)
-    Find.find(directory).select do |f|
-      File.file?(f) && File.extname(f) == ".flac"
-    end
-  end
-
   def self.deep_unescape_html(data)
     case data
     when Hash
