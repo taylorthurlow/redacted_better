@@ -16,6 +16,45 @@ def generate_flac(bit_depth: 16, sample_rate: 44_100, channels: 2)
 end
 
 describe Transcode do
+  describe ".transcode" do
+    it "transcodes a FLAC" do
+      rg = generate_release_group
+      allow(FileUtils).to receive(:cp_r)
+      allow(described_class).to receive(:transcode_file) do |_, _, _, dest|
+        `touch "#{dest}"`
+        [0, []]
+      end
+
+      expect(described_class.transcode(rg[:torrent], "MP3", "V0 (VBR)")).to be true
+    end
+
+    context "when a torrent fails with a non-zero exit code" do
+      it "returns false" do
+        rg = generate_release_group
+        allow(FileUtils).to receive(:cp_r)
+        allow(described_class).to receive(:transcode_file) do |_, _, _, dest|
+          `touch "#{dest}"`
+          [1, []]
+        end
+
+        expect(described_class.transcode(rg[:torrent], "MP3", "V0 (VBR)")).to be false
+      end
+    end
+
+    context "when a torrent fails with some errors" do
+      it "returns false" do
+        rg = generate_release_group
+        allow(FileUtils).to receive(:cp_r)
+        allow(described_class).to receive(:transcode_file) do |_, _, _, dest|
+          `touch "#{dest}"`
+          [0, ["There was an error somewhere."]]
+        end
+
+        expect(described_class.transcode(rg[:torrent], "MP3", "V0 (VBR)")).to be false
+      end
+    end
+  end
+
   describe ".transcode_file" do
     it "converts from 24-bit to 16-bit FLAC" do
       flac = generate_flac(bit_depth: 24)

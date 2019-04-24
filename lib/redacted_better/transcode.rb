@@ -16,7 +16,7 @@ class Transcode
     FlacInfo.new(path).streaminfo["channels"] > 2
   end
 
-  def self.transcode(torrent, format, encoding, spinner)
+  def self.transcode(torrent, format, encoding, spinner = nil)
     # Determine the new torrent directory name
     format_shorthand = Torrent.build_format(format, encoding)
     torrent_name = Torrent.build_string(torrent.group.artist,
@@ -30,18 +30,18 @@ class Transcode
 
     # Process each file
     torrent.flacs.each do |file_path|
-      spinner.update(text: " - " + File.basename(file_path))
+      spinner&.update(text: " - " + File.basename(file_path))
       new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
       destination_file = File.join(temp_torrent_dir, new_file_name)
       exit_code, errors = transcode_file(format, encoding, file_path, destination_file)
 
       unless exit_code.zero?
-        spinner.error("(transcode failed with exit code #{exit_code})")
+        spinner&.error("(transcode failed with exit code #{exit_code})")
         return false
       end
 
       if errors.any?
-        spinner.error(errors.join(", "))
+        spinner&.error(errors.join(", "))
         return false
       end
     end
@@ -51,8 +51,8 @@ class Transcode
     output_dir = $config.fetch(:directories, :output)
     FileUtils.cp_r(File.join(temp_torrent_dir), output_dir)
 
-    spinner.update(text: "")
-    spinner.success(" - done!")
+    spinner&.update(text: "")
+    spinner&.success(" - done!")
 
     true
   ensure
