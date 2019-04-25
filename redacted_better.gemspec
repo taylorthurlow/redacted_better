@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.executables = ["redactedbetter"]
   s.platform = "ruby"
   s.require_paths = ["lib"]
-  s.required_ruby_version = ">= 2.4.5"
+  s.required_ruby_version = ">= 2.3"
 
   s.add_dependency("faraday", "~> 0.15")       # HTTP client
   s.add_dependency("flacinfo-rb", "~> 1.0")    # Inspect FLAC metadata/info
