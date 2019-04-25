@@ -4,6 +4,8 @@ require "factory_bot"
 require "simplecov"
 require "webmock/rspec"
 
+WebMock.disable_net_connect!(allow_localhost: true)
+
 # Don't start code coverage if an environment variable is set, or if we are
 # explicitly testing a particular file/files. We only want to run coverage
 # reports when we run the entire test suite.
