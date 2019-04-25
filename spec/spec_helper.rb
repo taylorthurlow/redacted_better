@@ -45,7 +45,12 @@ RSpec.configure do |config|
   end
 
   config.before(:each) do
+    # Redirect all Redacted requests to the fake Sinatra app
     stub_request(:any, /redacted.ch/).to_rack(FakeRedacted)
+
+    # Stub the wait method so we don't have to abide by our normal API rate
+    # limiting mechanism
+    allow(Request).to receive(:wait_for_request)
   end
 
   config.before(:suite) do
