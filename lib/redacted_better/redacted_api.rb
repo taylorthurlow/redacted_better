@@ -10,8 +10,10 @@ class RedactedAPI
     parse_regex = /torrents\.php\?id=(\d+)&amp;torrentid=(\d+)/
     result = []
 
-    spinner = TTY::Spinner.new("[:spinner] Loading snatches...", format: :dots_4)
-    spinner.auto_spin
+    unless $quiet
+      spinner = TTY::Spinner.new("[:spinner] Loading snatches...", format: :dots_4)
+      spinner.auto_spin
+    end
 
     until finished
       page = 1
@@ -29,26 +31,29 @@ class RedactedAPI
       page += 1
     end
 
-    spinner.success(Pastel.new.green("done!"))
+    spinner&.success(Pastel.new.green("done!"))
 
     result
   end
 
   def mark_torrent_24bit(torrent_id)
-    spinner = TTY::Spinner.new("  [:spinner] Fixing mislabeled 24-bit torrent...", format: :dots_4)
-    spinner.auto_spin
+    unless $quiet
+      spinner = TTY::Spinner.new("  [:spinner] Fixing mislabeled 24-bit torrent...", format: :dots_4)
+      spinner.auto_spin
+    end
 
     agent = Mechanize.new
-    page = agent.get("https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}", [], nil, "Cookie" => @cookie)
+    url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
+    page = agent.get(url, [], nil, "Cookie" => @cookie)
     form = page.form("torrent")
     form.field_with(name: "bitrate").option_with(value: "24bit Lossless").click
     page = agent.submit(form, form.button_with(value: "Edit torrent"), "Cookie" => @cookie)
 
     if page.code.to_i == 200
-      spinner.stop(Pastel.new.green("done!"))
+      spinner&.stop(Pastel.new.green("done!"))
       true
     else
-      spinner.stop(Pastel.new.red("failed."))
+      spinner&.stop(Pastel.new.red("failed."))
       false
     end
   end

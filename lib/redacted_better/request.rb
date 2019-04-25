@@ -72,7 +72,9 @@ class Request
     ).merge(params)
   end
 
-  private_class_method def self.seconds_since_last_request
-                         Time.now.to_f - @@last_request_time
-                       end
+  private
+
+  def self.seconds_since_last_request
+    Time.now.to_f - @@last_request_time
+  end
 end

@@ -23,7 +23,7 @@ describe Request do
             action: "torrentgroup",
             cookie: "the_cookie",
           )
-        }.to raise_error("missing parameter(s): id")
+        }.to raise_error("Missing parameter(s): id")
       end
     end
   end
