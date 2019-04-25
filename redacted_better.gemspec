@@ -16,29 +16,26 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = ">= 2.4.5"
 
-  s.add_dependency("faraday", "~> 0.15")
-  s.add_dependency("flacinfo-rb", "~> 1.0")
-  s.add_dependency("htmlentities", "~> 4.3")
-  s.add_dependency("mechanize", "~> 2.7")
-  s.add_dependency("pastel", "~> 0.7")
-  s.add_dependency("require_all", "~> 2.0")
-  s.add_dependency("slop", "~> 4.6.2")
-  s.add_dependency("tty-config", "~> 0.3")
-  s.add_dependency("tty-file", "~> 0.7")
-  s.add_dependency("tty-prompt", "~> 0.18")
-  s.add_dependency("tty-spinner", "~> 0.9")
+  s.add_dependency("faraday", "~> 0.15")       # HTTP client
+  s.add_dependency("flacinfo-rb", "~> 1.0")    # Inspect FLAC metadata/info
+  s.add_dependency("htmlentities", "~> 4.3")   # Encode/decode HTML entities
+  s.add_dependency("mechanize", "~> 2.7")      # Automated web interaction
+  s.add_dependency("pastel", "~> 0.7")         # Print to STDOUT with colors
+  s.add_dependency("require_all", "~> 2.0")    # Easy require statements
+  s.add_dependency("slop", "~> 4.6.2")         # Command line parameters/flags
+  s.add_dependency("tty-config", "~> 0.3")     # Config file management
+  s.add_dependency("tty-file", "~> 0.7")       # Filesystem management
+  s.add_dependency("tty-prompt", "~> 0.18")    # Easy prompts
+  s.add_dependency("tty-spinner", "~> 0.9")    # Cool looking loading spinners
 
-  s.add_development_dependency("factory_bot", "~> 4.11")
-  s.add_development_dependency("guard", "~> 2.15")
+  s.add_development_dependency("factory_bot", "~> 4.11") # Easy test fixtures
+  s.add_development_dependency("guard", "~> 2.15")       # File watcher
   s.add_development_dependency("guard-rspec", "~> 4.7")
-  s.add_development_dependency("pry", "~> 0.12")
-  s.add_development_dependency("pry-byebug", "~> 3.6")
-  s.add_development_dependency("rspec", "~> 3.8")
-  s.add_development_dependency("rubocop", "~> 0.63")
-  s.add_development_dependency("rubocop-rspec", "~> 1.31")
-  s.add_development_dependency("rufo", "~> 0.6")
-  s.add_development_dependency("simplecov", "~> 0.16")
-  s.add_development_dependency("sinatra", "~> 2.0")
-  s.add_development_dependency("wavefile", "~> 1.1")
-  s.add_development_dependency("webmock", "~> 3.5")
+  s.add_development_dependency("pry", "~> 0.12")         # Better REPL
+  s.add_development_dependency("pry-byebug", "~> 3.6")   # Better debugger
+  s.add_development_dependency("rspec", "~> 3.8")        # Test suite
+  s.add_development_dependency("simplecov", "~> 0.16")   # Code coverage
+  s.add_development_dependency("sinatra", "~> 2.0")      # API stubbing
+  s.add_development_dependency("wavefile", "~> 1.1")     # Audio generator
+  s.add_development_dependency("webmock", "~> 3.5")      # Web stubbing
 end
