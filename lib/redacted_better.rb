@@ -74,24 +74,24 @@ class RedactedBetter
     if missing_files.any?
       Log.warning("  Missing #{missing_files.count} files(s):")
       missing_files.each { |f| Log.warning("    #{f}") }
-      return
+      return false
     end
 
     if torrent.any_multichannel?
       Log.warning("  Torrent is multichannel, skipping.")
-      return
+      return false
     end
 
     if torrent.mislabeled_24bit?
-      if $config.fetch(:fix_mislabeled_24bit)
+      if !$config.fetch(:fix_mislabeled_24bit)
         Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
       else
-        $api.mark_torrent_24bit(torrent["id"])
+        $api.mark_torrent_24bit(torrent.id)
       end
     end
 
     formats_missing = group.formats_missing(torrent)
-    return unless formats_missing.any?
+    return true unless formats_missing.any?
 
     tags_results = torrent.check_valid_tags
     unless tags_results[:valid]
@@ -100,18 +100,24 @@ class RedactedBetter
         Log.error("    #{file} - #{message}")
       end
 
-      return
+      return false
     end
 
-    spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
-    formats_missing.each do |f, e|
-      spinners.register("[:spinner] #{f} #{e}:text") do |sp|
-        Transcode.transcode(torrent, f, e, sp)
-        sp.success(Pastel.new.green("done."))
+    if $quiet
+      formats_missing.each { |f, e| Transcode.transcode(torrent, f, e) }
+    else
+      spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
+      formats_missing.each do |f, e|
+        spinners.register("[:spinner] #{f} #{e}:text") do |sp|
+          Transcode.transcode(torrent, f, e, sp)
+          sp.success(Pastel.new.green("done."))
+        end
       end
+
+      spinners.auto_spin
     end
 
-    spinners.auto_spin
+    true
   end
 
   def handle_help_opt
