@@ -53,7 +53,7 @@ class Account
   end
 
   def set_user_info
-    response = Request.send_request(action: "index", cookie: @cookie)
+    response = Request.send_request_action(action: "index", cookie: @cookie)
     @authkey = response[:response]["authkey"]
     @passkey = response[:response]["passkey"]
     @user_id = response[:response]["id"]

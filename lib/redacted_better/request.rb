@@ -2,7 +2,23 @@ class Request
   @@rate_limit = 2.0 # minimum seconds between each request
   @@last_request_time = Time.now.to_f
 
-  def self.send_request(action:, cookie:, params: {})
+  def self.send_request(url, cookie, headers: {})
+    wait_for_request
+
+    response = Faraday.new(url: "https://redacted.ch/").get do |request|
+      request.url url
+
+      # Get the default headers, including the cookie plus any other headers
+      # passed into this method
+      request.headers = self.headers({ "cookie" => cookie }.merge(headers))
+    end
+
+    notify_request_sent
+
+    response
+  end
+
+  def self.send_request_action(action:, cookie:, params: {})
     wait_for_request
 
     response = Faraday.new(url: "https://redacted.ch/").get do |request|

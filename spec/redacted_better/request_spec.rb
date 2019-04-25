@@ -4,7 +4,7 @@ describe Request do
   describe ".send_request" do
     context "when action is present" do
       it "sends a request" do
-        result = described_class.send_request(
+        result = described_class.send_request_action(
           action: "index",
           cookie: "the_cookie",
           params: { "extra_param" => "value" },
@@ -18,7 +18,7 @@ describe Request do
     context "when a parameter is missing" do
       it "raises an exception" do
         expect {
-          described_class.send_request(
+          described_class.send_request_action(
             # action "torrentgroup" expects an "id" parameter
             action: "torrentgroup",
             cookie: "the_cookie",

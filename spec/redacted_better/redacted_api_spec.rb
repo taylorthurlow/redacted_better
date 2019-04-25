@@ -10,7 +10,7 @@ describe RedactedAPI do
 
     context "when the request fails" do
       it "returns false" do
-        allow(Request).to receive(:send_request).and_return(status: "failure")
+        allow(Request).to receive(:send_request_action).and_return(status: "failure")
 
         expect(api.group_info(1234)).to be false
       end
