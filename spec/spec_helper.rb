@@ -4,7 +4,10 @@ require "factory_bot"
 require "simplecov"
 require "webmock/rspec"
 
-unless ENV["NO_COVERAGE"]
+# Don't start code coverage if an environment variable is set, or if we are
+# explicitly testing a particular file/files. We only want to run coverage
+# reports when we run the entire test suite.
+if !ENV["NO_COVERAGE"] && ARGV.grep(/spec\.rb/).empty?
   SimpleCov.start do
     add_filter "/vendor"
   end
