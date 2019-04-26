@@ -34,7 +34,7 @@ RSpec.configure do |config|
       $stdout = File.open(File::NULL, "w")
     end
 
-    $opts = { config: "default_config.yaml" }
+    $opts = { config: "spec/support/test_config.yaml" }
     $config = Config.load_config
     $quiet = true
   end

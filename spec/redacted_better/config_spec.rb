@@ -5,7 +5,7 @@ describe Config do
     before do
       @old_config = $opts[:config]
       path = File.join("tmp", SecureRandom.hex(5) + ".yaml")
-      FileUtils.cp("default_config.yaml", path)
+      FileUtils.cp("spec/support/test_config.yaml", path)
       $opts[:config] = path
     end
 

@@ -1,0 +1,37 @@
+# Your Redacted username and password.
+username:
+password:
+
+# Many FLAC torrents on Redacted marked as 16-bit are actually 24-bit, mostly
+# coming from Bandcamp, which does not make a distinction on their download
+# page. If this setting is set to true, redacted_better will attempt to modify
+# the torrent, and get another regular FLAC upload at the same time. This will
+# only occur on torrents which you have permission to edit. Users belonging to
+# the Elite class or higher have edit permissions for all torrents. Otherwise,
+# you are only allowed to edit torrents you have uploaded yourself. Accepted
+# values are "true" or "false".
+fix_mislabeled_24bit: true
+
+directories:
+  # Where your torrent client places finished music downloads.
+  # Ex: "/media/data/torrents/music"
+  download:
+
+  # Where finished transcodes will be placed
+  # Ex: "/media/data/torrents/redacted_upload"
+  output:
+
+  # Where the .torrent files for finished transcodes will be placed
+  # Ex: "/media/data/torrents/redacted_upload/torrent_files"
+  torrents:
+
+# This section allows you to configure the paths to various software
+# executables used by the program. If left blank, just the executable name will
+# be used, meaning that the executable will be looked for in all directories
+# contained in the $PATH shell variable. This is typically just fine. To
+# override any of these executables, provide an absolute path to the
+# executable, for example: "/usr/local/bin/flac"
+executables:
+  flac:
+  sox:
+  lame:

@@ -1,0 +1,14 @@
+username: username
+password: password
+
+fix_mislabeled_24bit: true
+
+directories:
+  download: /media/data/torrents/music
+  output: /media/data/torrents/redacted_upload
+  torrents: /media/data/torrents/redacted_upload/torrent_files
+
+executables:
+  flac:
+  sox:
+  lame:

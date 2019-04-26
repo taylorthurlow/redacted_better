@@ -21,9 +21,15 @@ class Config
       full_path = File.join(default_config_path, config.filename + config.extname)
       unless File.exist? full_path
         # Copy default config file into place
-        TTY::File.copy_file("default_config.yaml", full_path, verbose: !$quiet) do |f|
+        config_template = File.join(File.dirname(__FILE__), "..", "default_config.yaml")
+        FileUtils.cp(config_template, full_path) do |f|
           "# Default config file, created at #{Time.now}\n\n" + f
         end
+
+        Log.warning("Created an empty configuration file at path:")
+        Log.info("  #{full_path}")
+        Log.warning("Please edit this file and fill in the appropriate information.")
+        exit
       end
     end
 
