@@ -32,12 +32,30 @@ class RedactedBetter
 
     $api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
 
+    if $opts[:torrent]
+      handle_snatch(parse_torrent_url($opts[:torrent]))
+    else
     snatches = $api.all_snatches
     Log.info("")
     snatches.each { |s| handle_snatch(s) }
   end
+  end
 
   private
+
+  # Takes a URL, meant to be provided on as a command-line parameter, and
+  # extracts the group and torrent ids from it. The URL format is:
+  # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
+  def parse_torrent_url(url)
+    match = $opts[:torrent].match /torrents\.php\?id=(\d+)&torrentid=(\d+)/
+
+    if !match || !match[1] || !match[2]
+      Log.error("Unable to parse provided torrent URL.")
+      exit
+    end
+
+    { group_id: match[1].to_i, torrent_id: match[2].to_i }
+  end
 
   def handle_snatch(snatch)
     return unless (info = $api.group_info(snatch[:group_id]))
@@ -63,6 +81,7 @@ class RedactedBetter
       o.bool "-q", "--quiet", "only print to STDOUT when errors occur"
       o.string "-u", "--username", "your redacted username"
       o.string "-p", "--password", "your redacted password"
+      o.string "-t", "--torrent", "run for a single torrent, given a URL"
       o.bool "-h", "--help", "print help"
       o.on "-v", "--version", "print the version" do
         puts RedactedBetter::VERSION
