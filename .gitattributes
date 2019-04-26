@@ -1,0 +1,2 @@
+spec/support/redacted_responses/* linguist-vendored
+test.sh linguist-vendored
