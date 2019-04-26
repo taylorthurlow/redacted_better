@@ -45,6 +45,13 @@ class RedactedAPI
     agent = Mechanize.new
     url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
     page = agent.get(url, [], nil, "Cookie" => @cookie)
+
+    page_text = page.search("#content").text.gsub(/\s+/, " ")
+    if page_text.include? "Error 403"
+      spinner&.stop(Pastel.new.red("unable to fix, not allowed to edit this torrent"))
+      return false
+    end
+
     form = page.form("torrent")
     form.field_with(name: "bitrate").option_with(value: "24bit Lossless").click
     page = agent.submit(form, form.button_with(value: "Edit torrent"), "Cookie" => @cookie)
