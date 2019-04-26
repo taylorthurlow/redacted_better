@@ -115,7 +115,7 @@ class RedactedBetter
     if !$config.fetch(:fix_mislabeled_24bit)
       Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
     else
-      $api.mark_torrent_24bit(torrent.id)
+      formats_missing << ["FLAC", "Lossless"] if $api.mark_torrent_24bit(torrent.id)
     end
   end
 
