@@ -17,6 +17,8 @@ class Transcode
   end
 
   def self.transcode(torrent, format, encoding, spinner = nil)
+    spinner&.stop
+
     # Determine the new torrent directory name
     format_shorthand = Torrent.build_format(format, encoding)
     torrent_name = Torrent.build_string(torrent.group.artist,
@@ -68,8 +70,15 @@ class Transcode
     multichannel_errors = check_channels(flacinfo)
     errors = (sample_rate_errors + multichannel_errors).flatten
 
+    # Get the list of commands which are piped together to get the final file
     cmds = transcode_commands(format, encoding, source, destination, resample_required, required_sample_rate)
     `#{cmds.join(" | ")}` unless errors.any?
+
+    unless errors
+      # Copy the tags from the old file to the new file
+      tags_success = Tags.copy_tags(source, destination)
+      errors << "Error copying tags for #{File.basename(source)}." unless tags_success
+    end
 
     [$?.exitstatus, errors]
   end

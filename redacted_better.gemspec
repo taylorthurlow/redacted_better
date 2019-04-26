@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
   s.add_dependency("mechanize", "~> 2.7")      # Automated web interaction
   s.add_dependency("pastel", "~> 0.7")         # Print to STDOUT with colors
   s.add_dependency("require_all", "~> 2.0")    # Easy require statements
+  s.add_dependency("ruby-mp3info", "~> 0.8")   # Manage MP3 metadata
   s.add_dependency("slop", "~> 4.6.2")         # Command line parameters/flags
   s.add_dependency("tty-config", "~> 0.3")     # Config file management
   s.add_dependency("tty-file", "~> 0.7")       # Filesystem management

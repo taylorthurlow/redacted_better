@@ -66,13 +66,8 @@ class Torrent
               .map { |f| File.basename(f) }
   end
 
-  def check_valid_tags
-    results = flacs.map { |f| Tags.valid_tags?(f) }
-
-    {
-      valid: results.all? { |r| r[:valid] },
-      errors: results.map { |r| r[:errors] }.flatten,
-    }
+  def valid_tags?
+    flacs.all? { |f| Tags.valid_tags?(f) }
   end
 
   def format_shorthand

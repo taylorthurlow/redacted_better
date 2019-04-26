@@ -35,10 +35,10 @@ class RedactedBetter
     if $opts[:torrent]
       handle_snatch(parse_torrent_url($opts[:torrent]))
     else
-    snatches = $api.all_snatches
-    Log.info("")
-    snatches.each { |s| handle_snatch(s) }
-  end
+      snatches = $api.all_snatches
+      Log.info("")
+      snatches.each { |s| handle_snatch(s) }
+    end
   end
 
   private
@@ -100,25 +100,11 @@ class RedactedBetter
     return false if torrent_any_multichannel?(torrent)
     handle_mislableled_torrent(torrent) if torrent.mislabeled_24bit?
     return true unless formats_missing.any?
-    return false if torrent_bad_tags?(torrent)
+    return false unless torrent.valid_tags?
 
     start_transcodes(torrent, formats_missing)
 
     true
-  end
-
-  def torrent_bad_tags?(torrent)
-    tags_results = torrent.check_valid_tags
-    unless tags_results[:valid]
-      Log.error("  Found invalid tags:")
-      tags_results[:errors].each do |file, message|
-        Log.error("    #{file} - #{message}")
-      end
-
-      return true
-    end
-
-    false
   end
 
   def torrent_any_multichannel?(torrent)
@@ -133,8 +119,8 @@ class RedactedBetter
   def handle_mislableled_torrent(torrent)
     if !$config.fetch(:fix_mislabeled_24bit)
       Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
-    else
-      formats_missing << ["FLAC", "Lossless"] if $api.mark_torrent_24bit(torrent.id)
+    elsif $api.mark_torrent_24bit(torrent.id)
+      formats_missing << ["FLAC", "Lossless"]
     end
   end
 

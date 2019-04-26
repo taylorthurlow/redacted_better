@@ -238,26 +238,18 @@ describe Torrent do
     end
   end
 
-  describe "#check_valid_tags" do
+  describe "#valid_tags?" do
     context "when all files have valid tags" do
-      before { allow(Tags).to receive(:valid_tags?).and_return(valid: true, errors: []) }
-
       it "returns valid true and no errors" do
-        result = torrent.check_valid_tags
-
-        expect(result[:valid]).to be true
-        expect(result[:errors]).to be_empty
+        allow(Tags).to receive(:valid_tags?).and_return(true)
+        expect(torrent.valid_tags?).to be true
       end
     end
 
     context "when some files have invalid tags" do
-      before { allow(Tags).to receive(:valid_tags?).and_return(valid: false, errors: ["asdf.flac", "errmsg"]) }
-
       it "returns valid false with errors" do
-        result = torrent.check_valid_tags
-
-        expect(result[:valid]).to be false
-        expect(result[:errors]).to eq ["asdf.flac", "errmsg"]
+        allow(Tags).to receive(:valid_tags?).and_return(false)
+        expect(torrent.valid_tags?).to be false
       end
     end
   end

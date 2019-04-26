@@ -18,7 +18,7 @@ describe RedactedBetter do
     before do
       allow(Transcode).to receive(:transcode)
       allow(torrent).to receive(:missing_files).and_return []
-      allow(torrent).to receive(:check_valid_tags).and_return(
+      allow(torrent).to receive(:valid_tags?).and_return(
         valid: true, errors: [],
       )
     end
@@ -56,9 +56,7 @@ describe RedactedBetter do
 
     context "when there are malformed tags" do
       it "returns false" do
-        allow(torrent).to receive(:check_valid_tags).and_return(
-          valid: false, errors: ["somefile.flac", "file 01 is borked"],
-        )
+        allow(torrent).to receive(:valid_tags?).and_return(false)
 
         expect(redacted_better.send(:handle_found_release, group, torrent)).to be false
       end

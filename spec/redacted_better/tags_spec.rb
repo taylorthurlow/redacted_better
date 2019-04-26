@@ -13,7 +13,7 @@ describe Tags do
       info = instance_double("FlacInfo", tags: valid_tags)
       allow(FlacInfo).to receive(:new).and_return(info)
 
-      expect(described_class.valid_tags?("path")).to eq(valid: true, errors: [])
+      expect(described_class.valid_tags?("path.flac")).to be true
     end
 
     context "when malformed" do
@@ -22,9 +22,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.merge("TRACKNUMBER" => "asdf"))
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Malformed track number tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
     end
@@ -35,9 +33,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.reject { |k, _| k == "ARTIST" })
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Missing artist tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -46,9 +42,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.reject { |k, _| k == "ALBUM" })
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Missing album tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -57,9 +51,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.reject { |k, _| k == "TITLE" })
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Missing title tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -68,9 +60,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.reject { |k, _| k == "TRACKNUMBER" })
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Missing tracknumber tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
     end
@@ -81,9 +71,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.merge("ARTIST" => ""))
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Blank artist tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -92,9 +80,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.merge("ALBUM" => ""))
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Blank album tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -103,9 +89,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.merge("TITLE" => ""))
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Blank title tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
 
@@ -114,9 +98,7 @@ describe Tags do
           info = instance_double("FlacInfo", tags: valid_tags.merge("TRACKNUMBER" => ""))
           allow(FlacInfo).to receive(:new).and_return(info)
 
-          expect(described_class.valid_tags?("path")).to eq(
-            valid: false, errors: [["path", "Blank tracknumber tag."]],
-          )
+          expect(described_class.valid_tags?("path.flac")).to be false
         end
       end
     end
