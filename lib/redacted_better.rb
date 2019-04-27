@@ -27,11 +27,10 @@ class RedactedBetter
     $quiet = $opts[:quiet]
     $config = Config.load_config
     $cache = SnatchCache.new($opts[:cache_path], $opts[:delete_cache])
+    $account = Account.new
+    exit unless $account.login
 
-    account = Account.new
-    exit unless account.login
-
-    $api = RedactedAPI.new(user_id: account.user_id, cookie: account.cookie)
+    $api = RedactedAPI.new(user_id: $account.user_id, cookie: $account.cookie)
 
     if $opts[:torrent]
       handle_snatch(parse_torrent_url($opts[:torrent]))
@@ -157,8 +156,18 @@ class RedactedBetter
       spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
       formats_missing.each do |f, e|
         spinners.register("[:spinner] #{f} #{e}:text") do |sp|
-          Transcode.transcode(torrent, f, e, sp)
-          sp.success(Pastel.new.green("done."))
+          result = Transcode.transcode(torrent, f, e, sp)
+
+          if result
+            sp&.update(text: " - Creating .torrent file.")
+            if torrent.make_torrent(f, e, result)
+              sp.error(Pastel.new.red("failed."))
+            else
+              sp.success(Pastel.new.green("done."))
+            end
+          else
+            sp.error(Pastel.new.red("failed."))
+          end
         end
       end
 

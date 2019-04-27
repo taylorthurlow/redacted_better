@@ -1,5 +1,5 @@
 class Account
-  attr_reader :user_id, :cookie
+  attr_reader :user_id, :cookie, :passkey
 
   def initialize
     @username = nil

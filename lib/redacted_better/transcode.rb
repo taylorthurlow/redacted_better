@@ -25,7 +25,8 @@ class Transcode
 
     # Get final output dir and make sure it doesn't already exist
     output_dir = $config.fetch(:directories, :output)
-    if Dir.exist?(File.join(output_dir, torrent_name))
+    torrent_dir = File.join(output_dir, torrent_name)
+    if Dir.exist? torrent_dir
       spinner&.update(text: " - Failed")
       spinner&.error(Pastel.new.red("(output directory exists)"))
       return false
@@ -61,7 +62,7 @@ class Transcode
     spinner&.update(text: "")
     spinner&.success(" - done!")
 
-    true
+    torrent_dir
   ensure
     FileUtils.remove_dir(temp_dir, true) if temp_dir
     FileUtils.remove_dir(temp_torrent_dir, true) if temp_torrent_dir

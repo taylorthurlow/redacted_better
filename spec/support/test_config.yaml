@@ -12,3 +12,4 @@ executables:
   flac:
   sox:
   lame:
+  mktorrent:

@@ -45,6 +45,22 @@ class Torrent
     on_disk?(flacs_only: true) && flacs.any? { |f| Transcode.file_is_multichannel?(f) }
   end
 
+  # Given a source torrent, a destination directory, and the format/encoding of
+  # the transcode, generate a new .torrent file.
+  def make_torrent(format, encoding, directory)
+    torrent_string = Torrent.build_string(group.artist, group.name, year, media,
+                                          Torrent.build_format(format, encoding))
+    torrent_string += ".torrent"
+
+    torrent_file_dir = $config.fetch(:directories, :torrents)
+    FileUtils.mkdir_p(torrent_file_dir)
+    torrent_file = File.join(torrent_file_dir, torrent_string)
+
+    mktorrent_exe = $config.fetch(:executables, :mktorrent) || "mktorrent"
+    tracker_url = "https://flacsfor.me/#{$account.passkey}/announce"
+    `#{mktorrent_exe} -s RED -p -a #{tracker_url} -o "#{torrent_file}" -l 18 "#{directory}"`
+  end
+
   def year
     if @remastered && !@remaster_year.zero?
       @remaster_year
