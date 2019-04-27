@@ -1,0 +1,24 @@
+version: '3.7'
+
+services:
+  red:
+    build: .
+    working_dir: /project
+    volumes:
+      - .:/project
+      - ruby-bundle-cache:/usr/local/bundle
+      - ~/.config/redacted_better:/root/.config/redacted_better
+      - ~/Temp/redacted_better:/project/data
+    command:
+      - /bin/bash
+      - -c
+      - |
+        gem install bundler
+        echo -n "Performing bundle install..."
+        bundle install --quiet
+        echo " done."
+        chmod +x bin/entrypoint.sh
+        bin/entrypoint.sh
+
+volumes:
+  ruby-bundle-cache:
