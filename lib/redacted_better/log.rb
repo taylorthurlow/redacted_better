@@ -6,7 +6,7 @@ class Log
   end
 
   def self.info(message, newline: true)
-    log @@pastel.bright_white(message), newline
+    log @@pastel.white(message), newline
   end
 
   def self.debug(message, newline: true)
