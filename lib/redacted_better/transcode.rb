@@ -17,13 +17,19 @@ class Transcode
   end
 
   def self.transcode(torrent, format, encoding, spinner = nil)
-    spinner&.stop
-
     # Determine the new torrent directory name
     format_shorthand = Torrent.build_format(format, encoding)
     torrent_name = Torrent.build_string(torrent.group.artist,
                                         torrent.group.name, torrent.year,
                                         torrent.media, format_shorthand)
+
+    # Get final output dir and make sure it doesn't already exist
+    output_dir = $config.fetch(:directories, :output)
+    if Dir.exist?(File.join(output_dir, torrent_name))
+      spinner&.update(text: " - Failed")
+      spinner&.error(Pastel.new.red("(output directory exists)"))
+      return false
+    end
 
     # Set up a temporary directory to work in
     temp_dir = Dir.mktmpdir
@@ -50,7 +56,6 @@ class Transcode
 
     # Create final output directory and copy the finished transcode from the
     # temp directory into it
-    output_dir = $config.fetch(:directories, :output)
     FileUtils.cp_r(File.join(temp_torrent_dir), output_dir)
 
     spinner&.update(text: "")
