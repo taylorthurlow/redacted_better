@@ -3,7 +3,7 @@ class Config
     config = TTY::Config.new
 
     if $opts[:config]
-      # User has supplied an alternate config file path
+      # User has supplied an alternate config file
       if File.exist? $opts[:config]
         config.prepend_path File.dirname($opts[:config])
         config.filename = File.basename($opts[:config], ".*")
@@ -36,8 +36,6 @@ class Config
     config.read
     config
   end
-
-  private
 
   def self.default_config_path
     File.join(Dir.home, ".config", "redacted_better")

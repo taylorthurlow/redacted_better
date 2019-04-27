@@ -23,9 +23,10 @@ class RedactedBetter
     $opts = slop_parse
 
     handle_help_opt
-    $quiet = $opts[:quiet]
 
+    $quiet = $opts[:quiet]
     $config = Config.load_config
+    $cache = SnatchCache.new($opts[:cache_path], $opts[:delete_cache])
 
     account = Account.new
     exit unless account.login
@@ -58,6 +59,7 @@ class RedactedBetter
   end
 
   def handle_snatch(snatch)
+    return if $cache.contains?(snatch[:torrent_id])
     return unless (info = $api.group_info(snatch[:group_id]))
 
     group = Group.new(info["group"])
@@ -81,6 +83,8 @@ class RedactedBetter
       o.bool "-q", "--quiet", "only print to STDOUT when errors occur"
       o.string "-u", "--username", "your redacted username"
       o.string "-p", "--password", "your redacted password"
+      o.string "--cache-path", "path to an alternate cache file"
+      o.bool "--delete-cache", "invalidate the current cache"
       o.string "-t", "--torrent", "run for a single torrent, given a URL"
       o.bool "-h", "--help", "print help"
       o.on "-v", "--version", "print the version" do
@@ -98,8 +102,17 @@ class RedactedBetter
 
     return false if torrent_missing_files?(torrent)
     return false if torrent_any_multichannel?(torrent)
-    handle_mislableled_torrent(torrent) if torrent.mislabeled_24bit?
-    return true unless formats_missing.any?
+
+    if torrent.mislabeled_24bit?
+      fixed = handle_mislableled_torrent(torrent)
+      formats_missing << ["FLAC", "Lossless"] if fixed
+    end
+
+    unless formats_missing.any?
+      $cache.add(torrent)
+      return true
+    end
+
     return false unless torrent.valid_tags?
 
     start_transcodes(torrent, formats_missing)
@@ -119,8 +132,9 @@ class RedactedBetter
   def handle_mislableled_torrent(torrent)
     if !$config.fetch(:fix_mislabeled_24bit)
       Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
-    elsif $api.mark_torrent_24bit(torrent.id)
-      formats_missing << ["FLAC", "Lossless"]
+      false
+    else
+      $api.mark_torrent_24bit(torrent.id)
     end
   end
 
