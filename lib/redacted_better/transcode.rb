@@ -44,7 +44,7 @@ class Transcode
       exit_code, errors = transcode_file(format, encoding, file_path, destination_file)
 
       unless exit_code.zero?
-        spinner&.error("(transcode failed with exit code #{exit_code})")
+        spinner&.error(Pastel.new.red("(transcode failed with exit code #{exit_code})"))
         return false
       end
 
