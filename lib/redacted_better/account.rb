@@ -18,7 +18,11 @@ class Account
     Log.info("Logging in as #{@username}... ", newline: false)
 
     conn = Faraday.new(url: "https://redacted.ch/")
-    response = conn.post("login.php", username: @username, password: @password)
+    response = conn.post do |request|
+      request.url "login.php"
+      request.headers["User-Agent"] = RedactedBetter.user_agent
+      request.body = { username: @username, password: @password }
+    end
 
     case response.status
     when 302

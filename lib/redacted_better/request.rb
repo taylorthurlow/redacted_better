@@ -10,7 +10,10 @@ class Request
 
       # Get the default headers, including the cookie plus any other headers
       # passed into this method
-      request.headers = self.headers({ "cookie" => cookie }.merge(headers))
+      request.headers.merge!({
+        "cookie" => cookie,
+        "User-Agent" => RedactedBetter.user_agent,
+      }.merge(headers))
     end
 
     notify_request_sent
@@ -25,7 +28,7 @@ class Request
       url = "ajax.php?action=#{action}"
       params.each { |p, v| url += "&#{p}=#{v}" }
       request.url url
-      request.headers = action_headers("Cookie" => cookie)
+      request.headers.merge!(action_headers("Cookie" => cookie))
     end
 
     notify_request_sent
@@ -47,29 +50,20 @@ class Request
     @@last_request_time = Time.now.to_f
   end
 
-  # these headers are generally applicable to any requests being made by
-  # redacted_better, whether they are JSON API requests or just requests for
-  # HTML page contents.
-  def self.headers(params = {})
-    {
-      "User-Agent" => "redacted_better/#{RedactedBetter::VERSION} " \
-                      "(github.com/taylorthurlow/redacted_better)",
-    }.merge(params)
-  end
-
   # these headers are only applicable to requests to the official JSON api,
   # which all are in the form of "ajax.php?action=". Using these headers will
   # break responses to requests which are expected to be in HTML format like
   # "torrents.php".
   def self.action_headers(params = {})
-    headers.merge(
+    params.merge(
       "Cache-Control" => "max-age=0",
       "Connection" => "keep-alive",
       "Accept" => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Encoding" => "gzip,deflate,sdch",
       "Accept-Language" => "en-US,en;q=0.8",
       "Accept-Charset" => "ISO-8859-1,utf-8;q=0.7,*;q=0.3",
-    ).merge(params)
+      "User-Agent" => RedactedBetter.user_agent,
+    )
   end
 
   private

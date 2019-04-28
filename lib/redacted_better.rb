@@ -41,6 +41,10 @@ class RedactedBetter
     end
   end
 
+  def self.user_agent
+    "redacted_better/#{RedactedBetter::VERSION} (taylorthurlow/redacted_better@github)"
+  end
+
   private
 
   # Takes a URL, meant to be provided on as a command-line parameter, and

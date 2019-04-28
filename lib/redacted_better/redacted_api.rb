@@ -43,6 +43,7 @@ class RedactedAPI
     end
 
     agent = Mechanize.new
+    agent.user_agent = RedactedBetter.user_agent
     url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
     page = agent.get(url, [], nil, "Cookie" => @cookie)
 
