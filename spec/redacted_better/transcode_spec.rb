@@ -19,13 +19,21 @@ describe Transcode do
   describe ".transcode" do
     it "transcodes a FLAC" do
       rg = generate_release_group
+      group = rg[:group]
+      torrent = rg[:torrent]
       allow(FileUtils).to receive(:cp_r)
       allow(described_class).to receive(:transcode_file) do |_, _, _, dest|
         `touch "#{dest}"`
         [0, []]
       end
 
-      expect(described_class.transcode(rg[:torrent], "MP3", "V0 (VBR)")).to be true
+      expected_dir = File.join(
+        $config.fetch(:directories, :output),
+        Torrent.build_string(group.artist, group.name, torrent.year,
+                             torrent.media,
+                             Torrent.build_format("MP3", "V0 (VBR)"))
+      )
+      expect(described_class.transcode(torrent, "MP3", "V0 (VBR)")).to eq expected_dir
     end
 
     context "when a torrent fails with a non-zero exit code" do
