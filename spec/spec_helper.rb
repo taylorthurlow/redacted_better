@@ -11,7 +11,9 @@ WebMock.disable_net_connect!(allow_localhost: true)
 # reports when we run the entire test suite.
 if !ENV["NO_COVERAGE"] && ARGV.grep(/spec\.rb/).empty?
   SimpleCov.start do
-    add_filter "/vendor"
+    add_filter do |source_file|
+      (source_file.project_filename =~ /^\/lib\//).nil?
+    end
   end
 end
 
