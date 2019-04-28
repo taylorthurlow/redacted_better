@@ -303,6 +303,23 @@ describe Torrent do
     end
   end
 
+  describe "#make_torrent" do
+    it "creates a torrent file" do
+      temp_torrent_dir = Dir.mktmpdir
+      data_dir = Dir.mktmpdir
+      FileUtils.touch(File.join(data_dir, "fake_music_file.flac"))
+      allow($config).to receive(:fetch).and_call_original
+      allow($config).to receive(:fetch).with(:directories, :torrents).and_return temp_torrent_dir
+      $account = instance_double("Account")
+      allow($account).to receive(:passkey).and_return "abcd1234"
+      allow(torrent).to receive(:`) { `echo this returns 0` }
+
+      result = torrent.make_torrent("FLAC", "Lossless", data_dir)
+
+      expect(result).to be true
+    end
+  end
+
   describe ".in_same_release_group?" do
     let(:group) { create(:group) }
     let(:torrent1) { create(:torrent, group: group) }
