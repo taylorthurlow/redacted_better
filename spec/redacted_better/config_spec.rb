@@ -35,8 +35,7 @@ describe Config do
                                     .and_return(File.dirname($opts[:config]))
         $opts[:config] = nil
 
-        config = described_class.load_config
-        expect(config).to be_a TTY::Config
+        expect { described_class.load_config }.to raise_error SystemExit
       end
     end
   end
