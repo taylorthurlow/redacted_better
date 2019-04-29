@@ -20,7 +20,7 @@ class Config
 
   # Get a configuration option from the TTY::Config instance.
   #
-  # @param *keys [Array<Symbol>] the YAML keys to follow which contain the
+  # @param keys [Array<Symbol>] the YAML keys to follow which contain the
   #   desired configuration option
   def fetch(*keys)
     @tty_config.fetch(*keys)
