@@ -25,7 +25,9 @@ class RedactedBetter
     handle_help_opt
 
     $quiet = $opts[:quiet]
-    $config = Config.load_config
+
+    $config = Config.new($opts[:config])
+
     $cache = SnatchCache.new($opts[:cache_path], $opts[:delete_cache])
     $account = Account.new
     exit unless $account.login

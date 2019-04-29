@@ -1,7 +1,7 @@
 class SnatchCache
   def initialize(cache_path, invalidate)
     # Has the user supplied an alternate cache file?
-    @file = cache_path || File.join(Config.default_config_path, "cache.json")
+    @file = cache_path || File.join(Config.config_directory, "cache.json")
 
     File.delete(@file) if invalidate
 

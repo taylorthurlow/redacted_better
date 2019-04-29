@@ -1,42 +1,37 @@
 require "spec_helper"
 
 describe Config do
-  describe ".load_config" do
-    before do
-      @old_config = $opts[:config]
-      path = File.join("tmp", SecureRandom.hex(5) + ".yaml")
-      FileUtils.cp("spec/support/test_config.yaml", path)
-      $opts[:config] = path
-    end
+  subject(:config) { create(:config) }
 
-    after do
-      $opts[:config] = @old_config
-    end
+  describe ".initialize" do
+    context "when the provided path is not found" do
+      subject(:config) {
+        config_path = File.join(Dir.mktmpdir, "redacted_better.yaml")
+        create(:config, file_path: config_path)
+      }
 
-    context "when there is a config path provided" do
-      context "and the file exists" do
-        it "returns the config" do
-          expect(described_class.load_config).to be_a TTY::Config
-        end
-      end
-
-      context "and the file does not exist" do
-        it "exits" do
-          $opts[:config] = "doesnotexist.yaml"
-
-          expect { described_class.load_config }.to raise_error SystemExit
-        end
+      it "creates a new config file and exits" do
+        expect {
+          config
+        }.to raise_error SystemExit
       end
     end
 
-    context "when there is no config path provided" do
-      it "uses the default location and creates the file" do
-        allow(described_class).to receive(:default_config_path)
-                                    .and_return(File.dirname($opts[:config]))
-        $opts[:config] = nil
-
-        expect { described_class.load_config }.to raise_error SystemExit
+    context "when there is no provided path" do
+      it "uses the default config path" do
+        allow(described_class).to receive(:config_directory).and_return(Dir.mktmpdir)
+        allow_any_instance_of(described_class).to receive(:exit)
+        config = create(:config, file_path: nil)
+        expect(File.exist?(config.file_path)).to be true
       end
+    end
+  end
+
+  describe "#fetch" do
+    it "gets a configuration option" do
+      option = config.fetch(:directories, :download)
+
+      expect(option).to eq "/media/data/torrents/music"
     end
   end
 end
