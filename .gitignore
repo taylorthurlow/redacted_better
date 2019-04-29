@@ -11,3 +11,5 @@ coverage
 
 # Other
 tags
+doc
+.yardoc
