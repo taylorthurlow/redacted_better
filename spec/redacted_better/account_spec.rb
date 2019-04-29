@@ -6,10 +6,9 @@ describe Account do
   describe "#login" do
     context "when login info is correct" do
       it "logs in" do
-        account.instance_variable_set(:@username, "user")
-        account.instance_variable_set(:@password, "pass")
+        allow(account).to receive(:find_username).and_return "user"
+        allow(account).to receive(:find_username).and_return "pass"
 
-        expect(account.login).to be true
         expect(account.cookie).to eq "session=asdf1234"
         expect(account.user_id).to eq 4517
       end
@@ -23,7 +22,7 @@ describe Account do
         allow(Faraday).to receive(:new).and_return(conn)
         allow(response).to receive(:status).and_return(200)
 
-        expect(account.login).to be false
+        expect { account.send(:login) }.to raise_error SystemExit
       end
     end
 
@@ -35,7 +34,7 @@ describe Account do
         allow(Faraday).to receive(:new).and_return(conn)
         allow(response).to receive(:status).and_return(500)
 
-        expect(account.login).to be false
+        expect { account.send(:login) }.to raise_error SystemExit
       end
     end
 
@@ -45,7 +44,7 @@ describe Account do
         allow(conn).to receive(:post) { raise Faraday::TimeoutError }
         allow(Faraday).to receive(:new).and_return(conn)
 
-        expect(account.login).to be false
+        expect { account.send(:login) }.to raise_error SystemExit
       end
     end
   end

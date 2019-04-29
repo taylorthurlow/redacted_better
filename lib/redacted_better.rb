@@ -25,13 +25,9 @@ class RedactedBetter
     handle_help_opt
 
     $quiet = $opts[:quiet]
-
     $config = Config.new($opts[:config])
-
     $cache = SnatchCache.new($opts[:cache_path], $opts[:delete_cache])
     $account = Account.new
-    exit unless $account.login
-
     $api = RedactedAPI.new(user_id: $account.user_id, cookie: $account.cookie)
 
     if $opts[:torrent]
