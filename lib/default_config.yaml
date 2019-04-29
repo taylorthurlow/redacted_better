@@ -1,4 +1,6 @@
-# Your Redacted username and password.
+# Your Redacted username and password. If you would prefer not to include these
+# in this configuration file, and be prompted for one or both of them every
+# time you run the program, you can do so.
 username:
 password:
 
