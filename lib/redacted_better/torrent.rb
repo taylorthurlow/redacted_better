@@ -66,7 +66,7 @@ class Torrent
   end
 
   def valid_tags?
-    flacs.all? { |f| Tags.valid_tags?(f) }
+    on_disk?(flacs_only: true) && flacs.all? { |f| Tags.valid_tags?(f) }
   end
 
   def format_shorthand

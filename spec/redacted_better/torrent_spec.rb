@@ -240,14 +240,24 @@ describe Torrent do
 
   describe "#valid_tags?" do
     context "when all files have valid tags" do
-      it "returns valid true and no errors" do
+      it "returns false" do
+        allow(torrent).to receive(:on_disk?).and_return(true)
         allow(Tags).to receive(:valid_tags?).and_return(true)
         expect(torrent.valid_tags?).to be true
       end
     end
 
     context "when some files have invalid tags" do
-      it "returns valid false with errors" do
+      it "returns false" do
+        allow(torrent).to receive(:on_disk?).and_return(true)
+        allow(Tags).to receive(:valid_tags?).and_return(false)
+        expect(torrent.valid_tags?).to be false
+      end
+    end
+
+    context "when some files are not on disk" do
+      it "returns false" do
+        allow(torrent).to receive(:on_disk?).and_return(false)
         allow(Tags).to receive(:valid_tags?).and_return(false)
         expect(torrent.valid_tags?).to be false
       end
