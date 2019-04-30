@@ -24,10 +24,9 @@ class Torrent
   end
 
   def on_disk?(flacs_only: false)
-    @file_list.all? do |f|
-      File.exist?(f) || (flacs_only && !File.extname(f).casecmp(".flac").zero?)
+    files = flacs_only ? flacs : @file_list
+    files.all? { |f| File.exist?(f) }
     end
-  end
 
   def flacs
     @file_list.select { |f| File.extname(f).casecmp(".flac").zero? }
