@@ -3,7 +3,17 @@ class Account
 
   # Creates a new instance of Account by performing a login to Redacted. Exits
   # the program if the login fails or encounters an error.
-  def initialize
+  #
+  # @param username [String, nil] The username to sign in with. Expected to be
+  #   passed from command-line input, so it will be nil if not passed explicitly
+  #   with the `-u` flag.
+  # @param password [String, nil] The password to sign in with. Expected to be
+  #   passed from command-line input, so it will be nil if not passed explicitly
+  #   with the `-p` flag.
+  def initialize(username, password)
+    @username = username
+    @password = password
+
     exit unless login
   end
 
@@ -79,22 +89,24 @@ class Account
     @user_id = response[:response]["id"]
   end
 
-  # Obtains the user's username by first looking in the command options, then
-  # in the config file. The user is prompted for the username if it was not
-  # found.
+  # Obtains the user's username by first looking at the username provided when
+  # the instance of Account was created (which will come only from a command
+  # line argument), then in the config file. The user is prompted for the
+  # username if it was not found.
   #
   # @return [String] the username
   def find_username
-    $opts[:username] || $config.fetch(:username) || prompt_username
+    @username || $config.fetch(:username) || prompt_username
   end
 
-  # Obtains the user's password by first looking in the command options, then
-  # in the config file. The user is prompted for the password if it was not
-  # found.
+  # Obtains the user's password by first looking at the password provided when
+  # the instance of Account was created (which will come only from a command
+  # line argument), then in the config file. The user is prompted for the
+  # password if it was not found.
   #
   # @return [String] the password
   def find_password
-    $opts[:password] || $config.fetch(:password) || prompt_password
+    @password || $config.fetch(:password) || prompt_password
   end
 
   # Prompts the user for a username.

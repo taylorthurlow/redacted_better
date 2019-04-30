@@ -10,7 +10,15 @@ require "spec_helper"
 describe RedactedBetter do
   describe "#handle_found_release" do
     subject(:redacted_better) {
-      allow_any_instance_of(described_class).to receive(:slop_parse).and_return($opts)
+      # Set up a cache file so we don't create one in the home directory
+      cache_file = Tempfile.new("the_cache")
+      File.open(cache_file, "w") { |f| f.puts([].to_json) }
+
+      allow_any_instance_of(described_class).to receive(:slop_parse).and_return({
+        config: "spec/support/test_config.yaml",
+        cache_path: cache_file,
+        quiet: true,
+      })
       described_class.new
     }
 

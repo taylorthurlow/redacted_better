@@ -37,17 +37,7 @@ RSpec.configure do |config|
       $stdout = File.open(File::NULL, "w")
     end
 
-    # Set up a cache file so we don't create one in the home directory
-    cache_file = Tempfile.new("the_cache")
-    File.open(cache_file, "w") { |f| f.puts([].to_json) }
-
-    $opts = {
-      config: "spec/support/test_config.yaml",
-      cache_path: cache_file,
-      quiet: true,
-    }
-
-    $config = Config.new($opts[:config])
+    $config = Config.new("spec/support/test_config.yaml")
     $quiet = true
   end
 

@@ -1,7 +1,7 @@
 require "spec_helper"
 
 describe Account do
-  subject(:account) { described_class.new }
+  subject(:account) { described_class.new(nil, nil) }
 
   describe "#login" do
     context "when login info is correct" do

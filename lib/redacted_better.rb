@@ -20,18 +20,18 @@ require_rel "redacted_better"
 
 class RedactedBetter
   def initialize
-    $opts = slop_parse
+    @opts = slop_parse
 
     handle_help_opt
 
-    $quiet = $opts[:quiet]
-    $config = Config.new($opts[:config])
-    $cache = SnatchCache.new($opts[:cache_path], $opts[:delete_cache])
-    $account = Account.new
+    $quiet = @opts[:quiet]
+    $config = Config.new(@opts[:config])
+    $cache = SnatchCache.new(@opts[:cache_path], @opts[:delete_cache])
+    $account = Account.new(@opts[:username], @opts[:password])
     $api = RedactedAPI.new(user_id: $account.user_id, cookie: $account.cookie)
 
-    if $opts[:torrent]
-      handle_snatch(parse_torrent_url($opts[:torrent]))
+    if @opts[:torrent]
+      handle_snatch(parse_torrent_url(@opts[:torrent]))
     else
       snatches = $api.all_snatches
       Log.info("")
@@ -49,7 +49,7 @@ class RedactedBetter
   # extracts the group and torrent ids from it. The URL format is:
   # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
   def parse_torrent_url(url)
-    match = $opts[:torrent].match /torrents\.php\?id=(\d+)&torrentid=(\d+)/
+    match = @opts[:torrent].match /torrents\.php\?id=(\d+)&torrentid=(\d+)/
 
     if !match || !match[1] || !match[2]
       Log.error("Unable to parse provided torrent URL.")
@@ -178,8 +178,8 @@ class RedactedBetter
   end
 
   def handle_help_opt
-    if $opts[:help]
-      puts $opts
+    if @opts[:help]
+      puts @opts
       exit
     end
   end
