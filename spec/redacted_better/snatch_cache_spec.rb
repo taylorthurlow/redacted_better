@@ -5,11 +5,11 @@ describe SnatchCache do
     context "when invalidate is true" do
       it "deletes the existing cache file" do
         cache_file = Tempfile.new("the_cache")
-        allow(File).to receive(:delete)
+        allow(FileUtils).to receive(:rm)
 
         described_class.new(cache_file.path, true)
 
-        expect(File).to have_received(:delete).with(cache_file.path)
+        expect(FileUtils).to have_received(:rm).with(cache_file.path)
       end
     end
   end

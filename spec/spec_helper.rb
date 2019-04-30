@@ -23,23 +23,30 @@ Bundler.setup
 require "redacted_better" # and any other gems you need
 
 RSpec.configure do |config|
-  # set up factory_bot
+  # Set up factory_bot
   config.include FactoryBot::Syntax::Methods
 
-  # silence stdout and stderr
+  # Silence stdout and stderr
   original_stderr = $stderr
   original_stdout = $stdout
 
   config.before(:all) do
+    # Prevent silencing stdout and stderr when a debugger is being used
     unless defined?(Byebug) || defined?(Pry)
       $stderr = File.open(File::NULL, "w")
       $stdout = File.open(File::NULL, "w")
     end
 
+    # Set up a cache file so we don't create one in the home directory
+    cache_file = Tempfile.new("the_cache")
+    File.open(cache_file, "w") { |f| f.puts([].to_json) }
+
     $opts = {
       config: "spec/support/test_config.yaml",
+      cache_path: cache_file,
       quiet: true,
     }
+
     $config = Config.new($opts[:config])
     $quiet = true
   end
