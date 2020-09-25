@@ -16,20 +16,20 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = ">= 2.6"
 
-  s.add_dependency "faraday", "~> 0.15"       # HTTP client
+  s.add_dependency "faraday", "~> 1.0.1"       # HTTP client
   s.add_dependency "flacinfo-rb", "~> 1.0"    # Inspect FLAC metadata/info
   s.add_dependency "htmlentities", "~> 4.3"   # Encode/decode HTML entities
   s.add_dependency "mechanize", "~> 2.7"      # Automated web interaction
   s.add_dependency "pastel", "~> 0.7"         # Print to STDOUT with colors
   s.add_dependency "require_all", "~> 2.0"    # Easy require statements
   s.add_dependency "ruby-mp3info", "~> 0.8"   # Manage MP3 metadata
-  s.add_dependency "slop", "~> 4.6.2"         # Command line parameters/flags
+  s.add_dependency "slop", "~> 4.8.2"         # Command line parameters/flags
   s.add_dependency "tty-config", "~> 0.3"     # Config file management
   s.add_dependency "tty-file", "~> 0.7"       # Filesystem management
   s.add_dependency "tty-prompt", "~> 0.18"    # Easy prompts
   s.add_dependency "tty-spinner", "~> 0.9"    # Cool looking loading spinners
 
-  s.add_development_dependency "factory_bot", "~> 4.11" # Easy test fixtures
+  s.add_development_dependency "factory_bot", "~> 6.0" # Easy test fixtures
   s.add_development_dependency "guard", "~> 2.15"       # File watcher
   s.add_development_dependency "guard-rspec", "~> 4.7"
   s.add_development_dependency "rspec", "~> 3.8"        # Test suite
