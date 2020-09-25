@@ -1,3 +1,9 @@
+require "zeitwerk"
+
+loader = Zeitwerk::Loader.for_gem
+loader.push_dir(File.expand_path("../lib", __dir__))
+loader.setup
+
 require "pry-byebug"
 
 require "find"
@@ -9,14 +15,11 @@ require "mechanize"
 
 require "faraday"
 require "pastel"
-require "require_all"
 require "slop"
 require "tty-config"
 require "tty-file"
 require "tty-prompt"
 require "tty-spinner"
-
-require_rel "redacted_better"
 
 class RedactedBetter
   def initialize

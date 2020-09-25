@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.required_ruby_version = ">= 2.6"
 
-  s.add_dependency "faraday", "~> 1.0.1"       # HTTP client
+  s.add_dependency "faraday", "~> 1.0.1"      # HTTP client
   s.add_dependency "flacinfo-rb", "~> 1.0"    # Inspect FLAC metadata/info
   s.add_dependency "htmlentities", "~> 4.3"   # Encode/decode HTML entities
   s.add_dependency "mechanize", "~> 2.7"      # Automated web interaction
@@ -28,6 +28,7 @@ Gem::Specification.new do |s|
   s.add_dependency "tty-file", "~> 0.7"       # Filesystem management
   s.add_dependency "tty-prompt", "~> 0.18"    # Easy prompts
   s.add_dependency "tty-spinner", "~> 0.9"    # Cool looking loading spinners
+  s.add_dependency "zeitwerk", "~> 2.0"       # Code loading
 
   s.add_development_dependency "factory_bot", "~> 6.0" # Easy test fixtures
   s.add_development_dependency "guard", "~> 2.15"       # File watcher
