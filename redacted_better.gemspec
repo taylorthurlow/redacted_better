@@ -24,9 +24,9 @@ Gem::Specification.new do |s|
   s.add_dependency "require_all", "~> 2.0"    # Easy require statements
   s.add_dependency "ruby-mp3info", "~> 0.8"   # Manage MP3 metadata
   s.add_dependency "slop", "~> 4.8.2"         # Command line parameters/flags
-  s.add_dependency "tty-config", "~> 0.3"     # Config file management
-  s.add_dependency "tty-file", "~> 0.7"       # Filesystem management
-  s.add_dependency "tty-prompt", "~> 0.18"    # Easy prompts
+  s.add_dependency "tty-config", "~> 0.4"     # Config file management
+  s.add_dependency "tty-file", "~> 0.10"      # Filesystem management
+  s.add_dependency "tty-prompt", "~> 0.22"    # Easy prompts
   s.add_dependency "tty-spinner", "~> 0.9"    # Cool looking loading spinners
   s.add_dependency "zeitwerk", "~> 2.0"       # Code loading
 
