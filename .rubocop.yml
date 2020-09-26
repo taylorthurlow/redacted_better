@@ -1,71 +1,170 @@
-require: rubocop-rspec
+require:
+  - rubocop-rspec
+  - rubocop-performance
 
 AllCops:
-  TargetRubyVersion: 2.3
+  TargetRubyVersion: 2.6
+  NewCops: enable
   Exclude:
-    - '.circleci/**/*'
-    - 'app/assets/bower_components/**/*'
-    - 'bin/**/*'
-    - 'config/**/*'
-    - 'db/**/*'
-    - 'script/**/*'
-    - 'tmp/**/*'
-    - 'vendor/**/*'
-  RSpec:
-    Patterns:
-      - '_spec.rb$'
+    - "bin/**/*"
+    - "tmp/**/*"
+    - "vendor/**/*"
+
+###########
+# BUNDLER #
+###########
+
+Bundler:
+  Enabled: true
+
+Bundler/GemComment:
+  Enabled: true
+  OnlyFor: ["bitbucket", "gist", "git", "github", "source"]
+  IgnoredGems: []
+
+###########
+# GEMSPEC #
+###########
+
+Gemspec:
+  Enabled: true
+
+##########
+# LAYOUT #
+##########
 
 Layout:
+  Enabled: true
+
+Layout/LineLength:
+  Enabled: true
+  Max: 120
+
+Layout/RescueEnsureAlignment:
   Enabled: false
 
-Metrics/ClassLength:
-  Max: 200
-  Exclude:
-    - 'spec/**/*'
+Layout/CaseIndentation:
+  Enabled: false
+
+Layout/SpaceAroundOperators:
+  Enabled: true
+  EnforcedStyleForExponentOperator: space
+
+# Rufo already agrees with these
+
+Layout/MultilineMethodCallIndentation:
+  Enabled: false
+
+Layout/ArgumentAlignment:
+  Enabled: false
+
+Layout/FirstHashElementIndentation:
+  Enabled: false
+
+Layout/FirstArrayElementIndentation:
+  Enabled: false
+
+Layout/IndentationWidth:
+  Enabled: false
+
+Layout/ElseAlignment:
+  Enabled: false
+
+Layout/EndAlignment:
+  Enabled: false
+
+Layout/EmptyLinesAroundMethodBody:
+  Enabled: false
+
+# Make these agree with Rufo
+
+Layout/SpaceInsideBlockBraces:
+  Enabled: true
+  EnforcedStyleForEmptyBraces: space
+
+Layout/HeredocIndentation:
+  Enabled: false
+
+Layout/ClosingHeredocIndentation:
+  Enabled: false
+
+########
+# LINT #
+########
+
+Lint:
+  Enabled: true
+
+# This one was giving a false positive
+Lint/RedundantCopDisableDirective:
+  Enabled: false
+
+###########
+# METRICS #
+###########
+
+Metrics:
+  Enabled: true
 
 Metrics/MethodLength:
-  Max: 25
+  Enabled: true
+  Max: 50
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/ModuleLength:
+  Enabled: false
 
 Metrics/BlockLength:
+  Enabled: true
+  Max: 25
   Exclude:
-    - 'spec/**/*'
+    - "spec/**/*"
+    - "test/**/*"
 
-Metrics/LineLength:
-  Max: 80
-  IgnoredPatterns: ['#[^\{\n]+$'] # ignore end of line comments
-  Exclude:
-    - 'Guardfile'
+Metrics/CyclomaticComplexity:
+  Enabled: true
+  Max: 15
 
-Documentation:
-  Enabled: false
+Metrics/PerceivedComplexity:
+  Enabled: true
+  Max: 15
 
-Style/StringLiteralsInInterpolation:
-  Enabled: false
+Metrics/AbcSize:
+  Enabled: true
+  Max: 30
+
+##########
+# NAMING #
+##########
+
+Naming:
+  Enabled: true
+
+############
+# SECURITY #
+############
+
+Security:
+  Enabled: true
+
+#########
+# STYLE #
+#########
+
+Style:
+  Enabled: true
 
 Style/BlockDelimiters:
+  Enabled: true
+  EnforcedStyle: braces_for_chaining
   Exclude:
-    - 'spec/**/*'
-
-Style/NumericPredicate:
-  Enabled: false
-
-Style/GlobalVars:
-  Enabled: false
-
-Style/ClassVars:
-  Enabled: false
+    - "spec/**/*"
+    - "test/**/*"
 
 Style/SymbolArray:
   Enabled: false
-
-Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/TrailingCommaInArguments:
-  EnforcedStyleForMultiline: comma
 
 Style/WordArray:
   Enabled: false
@@ -73,45 +172,74 @@ Style/WordArray:
 Style/ClassAndModuleChildren:
   Enabled: false
 
-Style/StructInheritance:
+Style/Documentation:
   Enabled: false
+
+Style/DocumentationMethod:
+  Enabled: true
+  RequireForNonPublicMethods: true
+
+Style/NumericPredicate:
+  Enabled: true
+  EnforcedStyle: predicate
+
+Style/StringLiteralsInInterpolation:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+# Can never agree with Rufo
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: false
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+
+Style/TrailingCommaInArguments:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
 
 Style/FrozenStringLiteralComment:
   Enabled: false
 
-Style/GuardClause:
+Style/RedundantReturn:
   Enabled: false
 
-Style/StringLiterals:
-  EnforcedStyle: double_quotes
-
-Lint/IneffectiveAccessModifier:
+Style/TernaryParentheses:
   Enabled: false
 
-Lint/UselessAccessModifier:
+Style/RedundantParentheses:
   Enabled: false
 
-###############
-# RSpec Stuff #
-###############
-
-RSpec/MultipleDescribes:
+Style/AccessorGrouping:
   Enabled: false
 
-RSpec/MessageChain:
-  Enabled: false
+#########
+# RSPEC #
+#########
 
-RSpec/ContextWording:
-  Enabled: false
-
-RSpec/DescribeClass:
-  Enabled: false
+RSpec:
+  Enabled: true
 
 RSpec/ExampleLength:
-  Max: 10
+  Enabled: false
 
 RSpec/MultipleExpectations:
   Enabled: false
 
-RSpec/SubjectStub:
+RSpec/AnyInstance:
   Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: false
+
+###############
+# PERFORMANCE #
+###############
+
+Performance:
+  Enabled: true
