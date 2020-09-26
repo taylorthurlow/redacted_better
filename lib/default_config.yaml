@@ -1,8 +1,4 @@
-# Your Redacted username and password. If you would prefer not to include these
-# in this configuration file, and be prompted for one or both of them every
-# time you run the program, you can do so.
-username:
-password:
+api_key:
 
 # Many FLAC torrents on Redacted marked as 16-bit are actually 24-bit, mostly
 # coming from Bandcamp, which does not make a distinction on their download

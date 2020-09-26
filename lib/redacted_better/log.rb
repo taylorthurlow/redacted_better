@@ -2,18 +2,13 @@ class Log
   @@pastel = Pastel.new
 
   # @see #log
-  def self.success(message, newline: true)
-    log @@pastel.green(message), newline
+  def self.debug(message, newline: true)
+    log @@pastel.blue(message), newline
   end
 
   # @see #log
   def self.info(message, newline: true)
     log @@pastel.white(message), newline
-  end
-
-  # @see #log
-  def self.debug(message, newline: true)
-    log @@pastel.blue(message), newline
   end
 
   # @see #log
