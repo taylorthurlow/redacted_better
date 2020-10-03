@@ -41,41 +41,83 @@ module RedactedBetter
     # @return [Array<Hash>]
     def all_snatches(user_id)
       finished = false
-      parse_regex = /torrents\.php\?id=(\d+)&amp;torrentid=(\d+)/
       result = []
 
-      unless $quiet
-        spinner = TTY::Spinner.new("[:spinner] Loading snatches...", format: :dots_4)
-        spinner.auto_spin
-      end
-      
+      spinner = TTY::Spinner.new("[:spinner] Fetching snatches page :page_number...")
+      spinner.update(page_number: 1)
+      spinner.auto_spin
+
+      page = 1
       per_page = 500
-      offset = 0
 
       until finished
+        spinner.update(page_number: page)
+
         response = get(
           action: "user_torrents",
           params: {
-            id: 
-          }
+            id: user_id,
+            type: "snatched",
+            limit: per_page,
+            offset: (page * per_page) - 500,
+          },
         )
-        url = "torrents.php?type=snatched&userid=#{@user_id}&format=FLAC&page=#{page}"
 
-        response = Request.send_request(url, @cookie)
+        if response.data["snatched"].any?
+          result += response.data["snatched"]
+                            .map do |snatched|
+            {
+              torrent_group_id: snatched["groupId"],
+              torrent_group_name: snatched["name"],
+              torrent_id: snatched["torrentId"],
+            }
+          end
 
-        response.body.scan(parse_regex) do |group_id, torrent_id|
-          next if @skip_ids.include? torrent_id.to_i
-
-          result << { group_id: group_id.to_i, torrent_id: torrent_id.to_i }
+          page += 1
+        else
+          finished = true
+          spinner.success(Pastel.new.green("done."))
         end
-
-        finished = !response.body.include?("Next &gt;")
-        page += 1
       end
 
-      spinner&.success(Pastel.new.green("done!"))
-
       result
+    end
+
+    # Fetch a torrent from the API.
+    #
+    # @param id [Integer]
+    # @param download_directory [String]
+    #
+    # @return [Torrent]
+    def torrent(id, download_directory)
+      response = get(
+        action: "torrent",
+        params: { id: id },
+      )
+
+      group = Group.new(response.data["group"])
+
+      Torrent.new(response.data["torrent"], group, download_directory)
+    end
+
+    # Fetch a torrent group from the API, including child torrents.
+    #
+    # @param id [Integer]
+    # @param download_directory [String]
+    #
+    # @return [Group]
+    def torrent_group(id, download_directory)
+      response = get(
+        action: "torrentgroup",
+        params: { id: id },
+      )
+
+      group = Group.new(response.data["group"])
+      group.torrents += response.data["torrents"].map do |t|
+        Torrent.new(t, group, download_directory)
+      end
+
+      group
     end
 
     private
@@ -115,7 +157,6 @@ module RedactedBetter
 
       request_log.count { |req_time| req_time >= start_window }
     end
-
 
     # def mark_torrent_24bit(torrent_id)
     #   unless $quiet
