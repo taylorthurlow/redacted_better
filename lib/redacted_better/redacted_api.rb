@@ -167,7 +167,6 @@ module RedactedBetter
         remaster_title: source_torrent.remaster_title,
         remaster_record_label: source_torrent.remaster_record_label,
         remaster_catalogue_number: source_torrent.remaster_catalogue_number,
-        scene: source_torrent.scene,
         format: format,
         bitrate: encoding,
         tags: source_torrent.group.tags,
@@ -177,6 +176,8 @@ module RedactedBetter
         media: source_torrent.media,
         groupid: source_torrent.group.id,
       }
+
+      body_data[:scene] = true if source_torrent.scene
 
       response = post(
         action: "upload",
