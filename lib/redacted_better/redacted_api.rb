@@ -156,7 +156,7 @@ module RedactedBetter
     def upload_transcode(source_torrent, format, encoding, torrent_file_path)
       body_data = {
         file_input: Faraday::FilePart.new(File.open(torrent_file_path), "application/x-bittorrent"),
-        type: source_torrent.group.category_id,
+        type: source_torrent.group.category_id - 1,
         artists: source_torrent.group.artists.map { |a| a["name"] },
         importance: [1],
         title: source_torrent.group.name,
