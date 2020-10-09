@@ -15,7 +15,7 @@ module RedactedBetter
     # @return [Boolean]
     attr_accessor :remastered
 
-    # @return [String]
+    # @return [Integer]
     attr_accessor :remaster_year
 
     # @return [String]
@@ -26,6 +26,9 @@ module RedactedBetter
 
     # @return [String]
     attr_accessor :remaster_catalogue_number
+
+    # @return [Boolean]
+    attr_accessor :scene
 
     # @return [Array<String>]
     attr_accessor :file_list
@@ -54,6 +57,7 @@ module RedactedBetter
       @remaster_title = data_hash["remasterTitle"]
       @remaster_record_label = data_hash["remasterRecordLabel"]
       @remaster_catalogue_number = data_hash["remasterCatalogueNumber"]
+      @scene = data_hash["scene"]
       @file_path = data_hash["filePath"]
       @file_list = Torrent.parse_file_list(data_hash["fileList"])
       @download_directory = download_directory
@@ -199,7 +203,8 @@ module RedactedBetter
     # @param new_encoding [String]
     # @param passkey [String] account passkey
     #
-    # @return [Boolean] true if the torrent creation succeeded, false otherwise
+    # @return [String, nil] the path to the created torrent file, or nil if it
+    #   was not created
     def make_torrent(output_directory, torrent_file_directory, new_format, new_encoding, passkey)
       torrent_string = Torrent.build_string(
         group.artist,
@@ -221,7 +226,11 @@ module RedactedBetter
       tracker_url = "https://flacsfor.me/#{passkey}/announce"
       `#{mktorrent_exe} -s RED -p -a #{tracker_url} -o "#{torrent_file}" -l 18 "#{output_directory}"`
 
-      $?.exitstatus.zero?
+      if $?.exitstatus.zero?
+        torrent_file
+      else
+        nil
+      end
     end
 
     # Determines if two torrents are members of the same release group.

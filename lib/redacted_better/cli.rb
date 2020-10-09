@@ -125,9 +125,82 @@ module RedactedBetter
         return false
       end
 
-      start_transcodes(torrent, formats_missing)
+      torrent_files = []
+      spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
+
+      formats_missing.each do |format, encoding|
+        spinners.register("[:spinner] #{format} #{encoding}:text") do |sp|
+          if (torrent_file = perform_transcode(torrent, format, encoding, sp))
+            torrent_files << { file: torrent_file, format: format, encoding: encoding }
+          end
+        end
+      end
+
+      spinners.auto_spin
+
+      return false if torrent_files.none?
+
+      # spinners = TTY::Spinner::Multi.new("[:spinner] Uploading torrents:")
+
+      torrent_files.each do |torrent_file|
+        # spinners.register("[:spinner] #{torrent_file[:format]} #{torrent_file[:encoding]}:text") do |sp|
+        #   sp.update(text: " - Uploading...")
+
+        if @api.upload_transcode(torrent, torrent_file[:format], torrent_file[:encoding], torrent_file[:file])
+          puts "success"
+          # sp.success("successfully uploaded!")
+        else
+          puts "fail"
+          # sp.error("failed.")
+        end
+        # end
+      end
+
+      # spinners.auto_spin
 
       true
+    end
+
+    # def handle_mislableled_torrent(torrent)
+    #   if !$config.fetch(:fix_mislabeled_24bit)
+    #     Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
+    #     false
+    #   else
+    #     $api.mark_torrent_24bit(torrent.id)
+    #   end
+    # end
+
+    # Transcode a torrent to a target format.
+    #
+    # @param torrent [Torrent] the torrent to transcode
+    # @param format [String]
+    # @param encoding [String]
+    #
+    # @return [String, nil] the path to the created torrent file, otherwise nil
+    #   if a problem occurred
+    def perform_transcode(torrent, format, encoding, spinner = nil)
+      if (result = Transcode.transcode(torrent, format, encoding, @output_directory, spinner))
+        spinner&.update(text: " - Creating .torrent file...")
+
+        torrent_file = torrent.make_torrent(
+          result,
+          @torrents_directory,
+          format,
+          encoding,
+          @user["passkey"],
+        )
+
+        if torrent_file
+          spinner.update(text: "")
+          spinner.success(Pastel.new.green("Completed successfully."))
+
+          return torrent_file
+        end
+      end
+
+      spinner.error(Pastel.new.red("failed."))
+
+      nil
     end
 
     # Takes a URL, meant to be provided on as a command-line parameter, and
@@ -163,46 +236,6 @@ module RedactedBetter
         spinner.error("failed to authenticate, check your API key.")
         exit 1
       end
-    end
-
-    # def handle_mislableled_torrent(torrent)
-    #   if !$config.fetch(:fix_mislabeled_24bit)
-    #     Log.warning("  Skipping fix of mislabeled 24-bit torrent.")
-    #     false
-    #   else
-    #     $api.mark_torrent_24bit(torrent.id)
-    #   end
-    # end
-
-    # Transcode a torrent based on missing formats.
-    #
-    # @param torrent [Torrent] the torrent to transcode
-    # @param formats_missing [Array<Array>] array of array pairs representing
-    #   the formats missing ([format, encoding])
-    #
-    # @return [void]
-    def start_transcodes(torrent, formats_missing)
-      spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
-
-      formats_missing.each do |format, encoding|
-        spinners.register("[:spinner] #{format} #{encoding}:text") do |sp|
-          result = Transcode.transcode(torrent, format, encoding, @output_directory, sp)
-
-          if result
-            sp&.update(text: " - Creating .torrent file...")
-            if torrent.make_torrent(result, @torrents_directory, format, encoding, @user["passkey"])
-              sp.update(text: "")
-              sp.success(Pastel.new.green("Completed successfully."))
-            else
-              sp.error(Pastel.new.red("failed."))
-            end
-          else
-            sp.error(Pastel.new.red("failed."))
-          end
-        end
-      end
-
-      spinners.auto_spin
     end
 
     # @return [Slop::Result]

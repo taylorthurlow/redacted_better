@@ -1,6 +1,34 @@
 module RedactedBetter
   class Group
-    attr_accessor :id, :name, :year, :record_label, :artists
+    # @return [Integer]
+    attr_accessor :id
+
+    # @return [String]
+    attr_accessor :name
+
+    # @return [Integer]
+    attr_accessor :year
+
+    # @return [String]
+    attr_accessor :record_label
+
+    # @return [Array<Hash>]
+    attr_accessor :artists
+
+    # @return [Integer]
+    attr_accessor :release_type
+
+    # @return [Integer]
+    attr_accessor :category_id
+
+    # @return [String]
+    attr_accessor :category_name
+
+    # @return [Boolean]
+    attr_accessor :vanity_house
+
+    # @return [String]
+    attr_accessor :tags
 
     # @return [Array<Torrent>] the list of torrents within the group
     attr_accessor :torrents
@@ -13,12 +41,17 @@ module RedactedBetter
       @artists = data_hash["musicInfo"]["artists"]
       @year = data_hash["year"]
       @record_label = data_hash["recordLabel"]
+      @release_type = data_hash["releaseType"]
+      @category_id = data_hash["categoryId"]
+      @category_name = data_hash["categoryName"]
+      @vanity_house = data_hash["vanityHouse"]
+      @tags = data_hash["tags"].join(",")
       @torrents = []
     end
 
-    # Determines the artist name based on the number of contributing artists. Single artists
-    # are printed by themselves, two with a joining ampersand, and more than two with just
-    # "Various Artists".
+    # Determines the artist name based on the number of contributing artists.
+    # Single artists are printed by themselves, two with a joining ampersand,
+    # and more than two with just "Various Artists".
     #
     # @return [String] a string representing the artist(s) responsible for the
     #   group

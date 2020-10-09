@@ -23,13 +23,13 @@ module RedactedBetter
         @status = "unknown"
       end
 
-      @data = parsed_body["response"]
+      @data = parsed_body["response"] || parsed_body["error"]
       @status = parsed_body["status"]
     end
 
     # @return [Boolean]
     def success?
-      @status.downcase == "success"
+      @status.casecmp("success").zero?
     end
 
     # @return [Boolean]

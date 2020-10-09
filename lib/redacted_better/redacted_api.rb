@@ -36,6 +36,33 @@ module RedactedBetter
       end
     end
 
+    # @param action [String] the API action name
+    # @param body [String] body JSON content
+    #
+    # @return [Response]
+    def post(action:, body:)
+      wait_for_rate_limit do
+        faraday = Faraday.new(url: base_url) do |f|
+          f.request :multipart
+        end
+
+        response = faraday.post do |request|
+          url = "ajax.php?action=#{action}"
+
+          request.body = body
+          request.url url
+          request.headers.merge!(build_headers)
+        end
+
+        binding.pry
+
+        Response.new(
+          code: response.status,
+          body: response.body,
+        )
+      end
+    end
+
     # @param user_id [Integer] ID number of the user
     #
     # @return [Array<Hash>]
@@ -118,6 +145,47 @@ module RedactedBetter
       end
 
       group
+    end
+
+    # @param source_torrent [Torrent]
+    # @param format [String]
+    # @param encoding [String]
+    # @param torrent_file_path [String]
+    #
+    # @return [void]
+    def upload_transcode(source_torrent, format, encoding, torrent_file_path)
+      body_data = {
+        file_input: Faraday::FilePart.new(File.open(torrent_file_path), "application/x-bittorrent"),
+        type: source_torrent.group.category_id,
+        artists: source_torrent.group.artists.map { |a| a["name"] },
+        importance: [1],
+        title: source_torrent.group.name,
+        year: source_torrent.group.year,
+        releasetype: source_torrent.group.release_type,
+        # unknown: false,
+        remaster_year: source_torrent.remaster_year,
+        remaster_title: source_torrent.remaster_title,
+        remaster_record_label: source_torrent.remaster_record_label,
+        remaster_catalogue_number: source_torrent.remaster_catalogue_number,
+        scene: source_torrent.scene,
+        format: format,
+        bitrate: encoding,
+        tags: source_torrent.group.tags,
+        vbr: encoding.downcase.include?("vbr"),
+        logfiles: [],
+        vanity_house: source_torrent.group.vanity_house,
+        media: source_torrent.media,
+        groupid: source_torrent.group.id,
+      }
+
+      response = post(
+        action: "upload",
+        body: body_data,
+      )
+
+      binding.pry
+
+      response.success?
     end
 
     private
