@@ -140,23 +140,21 @@ module RedactedBetter
 
       return false if torrent_files.none?
 
-      # spinners = TTY::Spinner::Multi.new("[:spinner] Uploading torrents:")
+      spinners = TTY::Spinner::Multi.new("[:spinner] Uploading torrents:")
 
       torrent_files.each do |torrent_file|
-        # spinners.register("[:spinner] #{torrent_file[:format]} #{torrent_file[:encoding]}:text") do |sp|
-        #   sp.update(text: " - Uploading...")
+        spinners.register("[:spinner] #{torrent_file[:format]} #{torrent_file[:encoding]}:text") do |sp|
+          sp.update(text: " - Uploading...")
 
-        if @api.upload_transcode(torrent, torrent_file[:format], torrent_file[:encoding], torrent_file[:file])
-          puts "success"
-          # sp.success("successfully uploaded!")
-        else
-          puts "fail"
-          # sp.error("failed.")
+          if @api.upload_transcode(torrent, torrent_file[:format], torrent_file[:encoding], torrent_file[:file])
+            sp.success("successfully uploaded!")
+          else
+            sp.error("failed.")
+          end
         end
-        # end
       end
 
-      # spinners.auto_spin
+      spinners.auto_spin
 
       true
     end

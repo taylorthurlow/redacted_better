@@ -54,8 +54,6 @@ module RedactedBetter
           request.headers.merge!(build_headers)
         end
 
-        binding.pry
-
         Response.new(
           code: response.status,
           body: response.body,
@@ -187,8 +185,6 @@ module RedactedBetter
         action: "upload",
         body: body_data,
       )
-
-      binding.pry
 
       response.success?
     end
