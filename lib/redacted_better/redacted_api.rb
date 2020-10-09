@@ -175,6 +175,10 @@ module RedactedBetter
         vanity_house: source_torrent.group.vanity_house,
         media: source_torrent.media,
         groupid: source_torrent.group.id,
+        release_desc: <<~DESC.strip.tr("\n", " "),
+          This torrent was generated and uploaded by redacted_better
+          v#{RedactedBetter::VERSION}.
+        DESC
       }
 
       body_data[:scene] = true if source_torrent.scene
