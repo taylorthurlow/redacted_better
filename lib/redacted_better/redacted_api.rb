@@ -1,83 +1,275 @@
-class RedactedAPI
-  def initialize(user_id:, cookie:, skip_ids: [])
-    @user_id = user_id
-    @cookie = cookie
-    @skip_ids = skip_ids
-  end
+module RedactedBetter
+  class RedactedApi
+    # @return [String]
+    attr_reader :api_key
 
-  def all_snatches
-    finished = false
-    parse_regex = /torrents\.php\?id=(\d+)&amp;torrentid=(\d+)/
-    result = []
+    # @return [Array<Time>]
+    attr_accessor :request_log
 
-    unless $quiet
-      spinner = TTY::Spinner.new("[:spinner] Loading snatches...", format: :dots_4)
-      spinner.auto_spin
+    # @return [String]
+    attr_reader :base_url
+
+    # @param api_key [String]
+    def initialize(api_key)
+      @api_key = api_key
+      @request_log = []
+      @base_url = "https://redacted.ch/"
     end
 
-    until finished
+    # @param action [String] the API action name
+    # @param params [Hash] additional URL parameters
+    #
+    # @return [Response]
+    def get(action:, params: {})
+      wait_for_rate_limit do
+        response = Faraday.new(url: base_url).get do |request|
+          url = "ajax.php?action=#{action}"
+          params.each { |p, v| url += "&#{p}=#{v}" }
+          request.url url
+          request.headers.merge!(build_headers)
+        end
+
+        Response.new(
+          code: response.status,
+          body: response.body,
+        )
+      end
+    end
+
+    # @param action [String] the API action name
+    # @param body [String] body JSON content
+    #
+    # @return [Response]
+    def post(action:, body:)
+      wait_for_rate_limit do
+        faraday = Faraday.new(url: base_url) do |f|
+          f.request :multipart
+        end
+
+        response = faraday.post do |request|
+          url = "ajax.php?action=#{action}"
+
+          request.body = body
+          request.url url
+          request.headers.merge!(build_headers)
+        end
+
+        Response.new(
+          code: response.status,
+          body: response.body,
+        )
+      end
+    end
+
+    # @param user_id [Integer] ID number of the user
+    #
+    # @return [Array<Hash>]
+    def all_snatches(user_id)
+      finished = false
+      result = []
+
+      spinner = TTY::Spinner.new("[:spinner] Fetching snatches page :page_number...")
+      spinner.update(page_number: 1)
+      spinner.auto_spin
+
       page = 1
-      url = "torrents.php?type=snatched&userid=#{@user_id}&format=FLAC&page=#{page}"
+      per_page = 500
 
-      response = Request.send_request(url, @cookie)
+      until finished
+        spinner.update(page_number: page)
 
-      response.body.scan(parse_regex) do |group_id, torrent_id|
-        next if @skip_ids.include? torrent_id.to_i
+        response = get(
+          action: "user_torrents",
+          params: {
+            id: user_id,
+            type: "snatched",
+            limit: per_page,
+            offset: (page * per_page) - 500,
+          },
+        )
 
-        result << { group_id: group_id.to_i, torrent_id: torrent_id.to_i }
+        if response.data["snatched"].any?
+          result += response.data["snatched"]
+                            .map do |snatched|
+            {
+              torrent_group_id: snatched["groupId"],
+              torrent_group_name: snatched["name"],
+              torrent_id: snatched["torrentId"],
+            }
+          end
+
+          page += 1
+        else
+          finished = true
+          spinner.success(Pastel.new.green("done."))
+        end
       end
 
-      finished = !response.body.include?("Next &gt;")
-      page += 1
+      result
     end
 
-    spinner&.success(Pastel.new.green("done!"))
+    # Fetch a torrent from the API.
+    #
+    # @param id [Integer]
+    # @param download_directory [String]
+    #
+    # @return [Torrent]
+    def torrent(id, download_directory)
+      response = get(
+        action: "torrent",
+        params: { id: id },
+      )
 
-    result
-  end
+      group = Group.new(response.data["group"])
 
-  def mark_torrent_24bit(torrent_id)
-    unless $quiet
-      spinner = TTY::Spinner.new("  [:spinner] Fixing mislabeled 24-bit torrent...", format: :dots_4)
-      spinner.auto_spin
+      Torrent.new(response.data["torrent"], group, download_directory)
     end
 
-    agent = Mechanize.new
-    agent.user_agent = RedactedBetter.user_agent
-    url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
-    page = agent.get(url, [], nil, "Cookie" => @cookie)
+    # Fetch a torrent group from the API, including child torrents.
+    #
+    # @param id [Integer]
+    # @param download_directory [String]
+    #
+    # @return [Group]
+    def torrent_group(id, download_directory)
+      response = get(
+        action: "torrentgroup",
+        params: { id: id },
+      )
 
-    page_text = page.search("#content").text.gsub(/\s+/, " ")
-    if page_text.include? "Error 403"
-      spinner&.stop(Pastel.new.red("unable to fix, not allowed to edit this torrent"))
-      return false
+      group = Group.new(response.data["group"])
+      group.torrents += response.data["torrents"].map do |t|
+        Torrent.new(t, group, download_directory)
+      end
+
+      group
     end
 
-    form = page.form("torrent")
-    form.field_with(name: "bitrate").option_with(value: "24bit Lossless").click
-    page = agent.submit(form, form.button_with(value: "Edit torrent"), "Cookie" => @cookie)
+    # @param source_torrent [Torrent]
+    # @param format [String]
+    # @param encoding [String]
+    # @param torrent_file_path [String]
+    #
+    # @return [void]
+    def upload_transcode(source_torrent, format, encoding, torrent_file_path)
+      body_data = {
+        file_input: Faraday::FilePart.new(File.open(torrent_file_path), "application/x-bittorrent"),
+        type: source_torrent.group.category_id - 1,
+        artists: source_torrent.group.artists.map { |a| a["name"] },
+        importance: [1],
+        title: source_torrent.group.name,
+        year: source_torrent.group.year,
+        releasetype: source_torrent.group.release_type,
+        # unknown: false,
+        remaster_year: source_torrent.remaster_year,
+        remaster_title: source_torrent.remaster_title,
+        remaster_record_label: source_torrent.remaster_record_label,
+        remaster_catalogue_number: source_torrent.remaster_catalogue_number,
+        format: format,
+        bitrate: encoding,
+        tags: source_torrent.group.tags,
+        vbr: encoding.downcase.include?("vbr"),
+        logfiles: [],
+        vanity_house: source_torrent.group.vanity_house,
+        media: source_torrent.media,
+        groupid: source_torrent.group.id,
+        release_desc: <<~DESC.strip.tr("\n", " "),
+          This torrent was generated and uploaded by redacted_better
+          v#{RedactedBetter::VERSION}.
+        DESC
+      }
 
-    if page.code.to_i == 200
-      spinner&.stop(Pastel.new.green("done!"))
-      true
-    else
-      spinner&.stop(Pastel.new.red("failed."))
-      false
+      body_data[:scene] = true if source_torrent.scene
+
+      response = post(
+        action: "upload",
+        body: body_data,
+      )
+
+      response.success?
     end
-  end
 
-  def group_info(group_id)
-    response = Request.send_request_action(
-      action: "torrentgroup",
-      cookie: @cookie,
-      params: { id: group_id },
-    )
+    private
 
-    if response[:status] == "success"
-      Utils.deep_unescape_html(response[:response])
-    else
-      Log.error("Failed to get info for torrent group #{group_id}.")
-      false
+    # @param additional_headers [Hash{String=>String}]
+    #
+    # @return [Hash{String => String}]
+    def build_headers(additional_headers = {})
+      {
+        "User-Agent" => RedactedBetter.user_agent,
+        "Authorization" => api_key,
+      }.merge!(additional_headers)
     end
+
+    # Run some code, ensuring that we don't make more than 5 requests in a
+    # 10-second rolling window.
+    #
+    # @return [void]
+    def wait_for_rate_limit
+      while requests_in_last_ten_seconds >= 5
+        sleep(0.1)
+      end
+
+      log_request(Time.now)
+
+      yield
+    end
+
+    # @param time [Time]
+    def log_request(time)
+      request_log << time
+    end
+
+    # @return [Integer]
+    def requests_in_last_ten_seconds
+      start_window = Time.now - 10
+
+      request_log.count { |req_time| req_time >= start_window }
+    end
+
+    # def mark_torrent_24bit(torrent_id)
+    #   unless $quiet
+    #     spinner = TTY::Spinner.new("  [:spinner] Fixing mislabeled 24-bit torrent...", format: :dots_4)
+    #     spinner.auto_spin
+    #   end
+
+    #   agent = Mechanize.new
+    #   agent.user_agent = RedactedBetter.user_agent
+    #   url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
+    #   page = agent.get(url, [], nil, "Cookie" => @cookie)
+
+    #   page_text = page.search("#content").text.gsub(/\s+/, " ")
+    #   if page_text.include? "Error 403"
+    #     spinner&.stop(Pastel.new.red("unable to fix, not allowed to edit this torrent"))
+    #     return false
+    #   end
+
+    #   form = page.form("torrent")
+    #   form.field_with(name: "bitrate").option_with(value: "24bit Lossless").click
+    #   page = agent.submit(form, form.button_with(value: "Edit torrent"), "Cookie" => @cookie)
+
+    #   if page.code.to_i == 200
+    #     spinner&.stop(Pastel.new.green("done!"))
+    #     true
+    #   else
+    #     spinner&.stop(Pastel.new.red("failed."))
+    #     false
+    #   end
+    # end
+
+    # def group_info(group_id)
+    #   response = Request.send_request_action(
+    #     action: "torrentgroup",
+    #     cookie: @cookie,
+    #     params: { id: group_id },
+    #   )
+
+    #   if response[:status] == "success"
+    #     Utils.deep_unescape_html(response[:response])
+    #   else
+    #     Log.error("Failed to get info for torrent group #{group_id}.")
+    #     false
+    #   end
+    # end
   end
 end

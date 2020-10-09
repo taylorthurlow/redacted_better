@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'redacted_better'
+require "redacted_better"
 
-rb = RedactedBetter.new
+cli = RedactedBetter::Cli.new
+
+cli.start

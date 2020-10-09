@@ -20,7 +20,14 @@ end
 require "bundler/setup"
 Bundler.setup
 
-require "redacted_better" # and any other gems you need
+require "redacted_better"
+
+# Check if sox is installed
+`which sox`
+unless $?.success?
+  warn "Unable to find `sox` executable."
+  exit 1
+end
 
 RSpec.configure do |config|
   # Set up factory_bot
