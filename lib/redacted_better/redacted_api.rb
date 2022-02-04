@@ -132,7 +132,11 @@ module RedactedBetter
         params: { id: id },
       )
 
-      group = Group.new(response.data["group"])
+      data = response.data
+      data["group"].delete("wikiBody")
+      data["group"].delete("bbBody")
+
+      group = Group.new(data["group"])
 
       Torrent.new(response.data["torrent"], group, download_directory)
     end
@@ -149,8 +153,12 @@ module RedactedBetter
         params: { id: id },
       )
 
-      group = Group.new(response.data["group"])
-      group.torrents += response.data["torrents"].map do |t|
+      data = response.data
+      data["group"].delete("wikiBody")
+      data["group"].delete("bbBody")
+
+      group = Group.new(data["group"])
+      group.torrents += data["torrents"].map do |t|
         Torrent.new(t, group, download_directory)
       end
 
