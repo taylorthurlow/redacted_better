@@ -191,11 +191,12 @@ module RedactedBetter
 
         torrent_file = torrent.make_torrent(
           result,
-          @torrents_directory,
           format,
           encoding,
           @user["passkey"],
         )
+
+        FileUtils.cp(torrent_file, @torrents_directory)
 
         if torrent_file
           spinner.update(text: "")

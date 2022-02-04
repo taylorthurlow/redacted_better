@@ -197,15 +197,13 @@ module RedactedBetter
     #   directory itself will be included in the torrent to make sure that all
     #   files are properly encapsulated within a single directory, to prevent
     #   download directory pollution.
-    # @param torrent_file_directory [String] the directory in which to place
-    #   the generated torrent file
     # @param new_format [String]
     # @param new_encoding [String]
     # @param passkey [String] account passkey
     #
     # @return [String, nil] the path to the created torrent file, or nil if it
     #   was not created
-    def make_torrent(output_directory, torrent_file_directory, new_format, new_encoding, passkey)
+    def make_torrent(output_directory, new_format, new_encoding, passkey)
       torrent_string = Torrent.build_string(
         group.artist,
         group.name,
@@ -216,8 +214,7 @@ module RedactedBetter
 
       torrent_string += ".torrent"
 
-      FileUtils.mkdir_p(torrent_file_directory)
-      torrent_file = File.join(torrent_file_directory, torrent_string)
+      torrent_file = File.join(Dir.mktmpdir, torrent_string)
 
       # TODO : Allow config
       # mktorrent_exe = $config.fetch(:executables, :mktorrent) || "mktorrent"
