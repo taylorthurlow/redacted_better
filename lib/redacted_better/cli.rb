@@ -121,7 +121,7 @@ module RedactedBetter
         # formats_missing << ["FLAC", "Lossless"] if fixed
       end
 
-      unless formats_missing.any?
+      if formats_missing.none?
         @snatch_cache.add(torrent)
 
         return true
