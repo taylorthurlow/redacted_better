@@ -116,7 +116,9 @@ module RedactedBetter
     def self.flac_tag_errors(file_path)
       errors = []
       basename = File.basename(file_path)
-      tags = FlacInfo.new(file_path).tags
+      tags = FlacInfo.new(file_path)
+                     .tags
+                     .transform_keys { |k| k.upcase }
 
       required_tags.each do |tag_name|
         unless tags.key? tag_name
