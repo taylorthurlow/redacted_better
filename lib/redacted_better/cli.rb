@@ -45,23 +45,31 @@ module RedactedBetter
       torrent = @api.torrent(url_data[:torrent_id], @download_directory)
       torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
 
-      handle_found_release(torrent_group, torrent)
+      @snatch_cache.add(torrent)
+
+      success = handle_found_release(torrent_group, torrent)
+
+      @snatch_cache.remove(torrent) unless success
     end
 
     def handle_all_snatched
-      snatches = @api.all_snatches(@user["id"])
+      seeding = @api.user_torrents(@user["id"], type: :seeding)
 
-      spinner = TTY::Spinner.new("[:spinner] Processing snatches list: :current")
+      spinner = TTY::Spinner.new("[:spinner] Processing seeding list: :current")
       spinner.auto_spin
-      snatches.each do |snatch|
-        spinner.update(current: snatch[:torrent_group_name])
+      seeding.each do |seeded|
+        spinner.update(current: seeded[:torrent_group_name])
 
-        torrent = @api.torrent(snatch[:torrent_id], @download_directory)
+        next if @snatch_cache.contains?(seeded[:torrent_id])
+
+        torrent = @api.torrent(seeded[:torrent_id], @download_directory)
         @snatch_cache.add(torrent)
 
-        torrent_group = @api.torrent_group(snatch[:torrent_group_id], @download_directory)
+        torrent_group = @api.torrent_group(seeded[:torrent_group_id], @download_directory)
 
-        torrent_group.formats_missing(torrent)
+        success = handle_found_release(torrent_group, torrent)
+
+        @snatch_cache.remove(torrent) unless success
       end
     end
 
@@ -85,6 +93,7 @@ module RedactedBetter
     #
     # @return [Boolean] successful?
     def handle_found_release(group, torrent)
+      Log.info("")
       Log.info("Release found: #{torrent}")
       Log.info("  #{torrent.url}")
 
