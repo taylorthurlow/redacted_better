@@ -36,19 +36,29 @@ module RedactedBetter
 
     # Determines if all relevant file tags of a source and destination audio file
     # are the same. Used to check that a tag copy happened successfully.
+    #
+    # @param source [FlacInfo]
+    # @param destination [FlacInfo]
+    #
+    # @return [Boolean] true if equal
     def self.check_tags_equal(source, destination)
       true # TODO: Implement this
     end
 
     # Copies all relevant file tags given a source and destination instance of
-    # FlacInfo. Returns true if the tags were set successfully, and false
-    # otherwise.
+    # FlacInfo.
+    #
+    # @param source [FlacInfo]
+    # @param destination [FlacInfo]
+    #
+    # @return [Boolean] true if set successfully, false otherwise
     def self.copy_tags_to_flac(source, destination)
       source = FlacInfo.new(source)
       destination = FlacInfo.new(destination)
 
       source.tags.each do |name, value|
         next unless allowed_tags.include? name
+
         destination.comment_add("#{name}=#{value}")
       end
 
