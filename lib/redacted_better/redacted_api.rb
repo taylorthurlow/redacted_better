@@ -61,14 +61,22 @@ module RedactedBetter
       end
     end
 
+    # Get a list of torrents associated with a given user.
+    #
     # @param user_id [Integer] ID number of the user
+    # @param type [Symbol] the type of torrents to look up - valid options are
+    #   `:snatched`, `:seeding`, `:leeching`, and `:uploaded`
     #
     # @return [Array<Hash>]
-    def all_snatches(user_id)
+    def user_torrents(user_id, type:)
+      unless %i[snatched seeding leeching uploaded].include?(type)
+        raise "Unknown user torrent search type: #{type}"
+      end
+
       finished = false
       result = []
 
-      spinner = TTY::Spinner.new("[:spinner] Fetching snatches page :page_number...")
+      spinner = TTY::Spinner.new("[:spinner] Fetching #{type} torrents page :page_number...")
       spinner.update(page_number: 1)
       spinner.auto_spin
 
@@ -82,19 +90,23 @@ module RedactedBetter
           action: "user_torrents",
           params: {
             id: user_id,
-            type: "snatched",
+            type: type.to_s,
             limit: per_page,
             offset: (page * per_page) - 500,
           },
         )
 
-        if response.data["snatched"].any?
-          result += response.data["snatched"]
-                            .map do |snatched|
+        # Get a list of entries where an artist ID is present, because we need
+        # to filter out non-music torrents
+        entries = response.data[type.to_s]
+          .reject { |d| d["artistId"].nil? }
+
+        if entries.any?
+          result += entries.map do |torrent|
             {
-              torrent_group_id: snatched["groupId"],
-              torrent_group_name: snatched["name"],
-              torrent_id: snatched["torrentId"],
+              torrent_group_id: torrent["groupId"],
+              torrent_group_name: torrent["name"],
+              torrent_id: torrent["torrentId"],
             }
           end
 
