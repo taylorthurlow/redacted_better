@@ -11,6 +11,8 @@ module RedactedBetter
     # Adds a torrent to the cache.
     #
     # @param torrent [Torrent] the torrent to add to the cache
+    #
+    # @return [void]
     def add(torrent)
       data = JSON.parse(File.read(@file_path))
 
@@ -23,6 +25,32 @@ module RedactedBetter
         f.truncate(0)
         f.puts data.to_json
       end
+    end
+
+    # Removes a torrent from the cache, if present.
+    #
+    # @param torrent [Torrent] the torrent to remove from the cache
+    #
+    # @return [Boolean] true if the removed torrent was present
+    def remove(torrent)
+      data = JSON.parse(File.read(@file_path))
+      count_before = data.count
+
+      data.delete_if do |entry|
+        entry == {
+          id: torrent.id,
+          name: torrent.to_s,
+        }
+      end
+
+      count_after = data.count
+
+      File.open(@file_path, "w") do |f|
+        f.truncate(0)
+        f.puts data.to_json
+      end
+
+      count_before != count_after
     end
 
     # Determine if the cache contains a given torrent.
