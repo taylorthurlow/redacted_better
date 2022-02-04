@@ -1,6 +1,7 @@
 module RedactedBetter
   class Log
     @@pastel = Pastel.new
+    @@html_decoder ||= HTMLEntities.new
 
     # @see #log
     def self.debug(message, newline: true)
@@ -30,6 +31,7 @@ module RedactedBetter
     def self.log(message, newline)
       return if $quiet
 
+      message = @@html_decoder.decode(message)
       newline ? puts(message) : print(message)
     end
   end
