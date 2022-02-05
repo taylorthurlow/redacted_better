@@ -75,25 +75,25 @@ module RedactedBetter
       # If we're just resampling a FLAC to another FLAC, just use SoX to do
       # that, and skip the rest of the transcode process
       if format == "FLAC" && resample_required
-        return ["#{sox_exe} '#{source}' -qG -b 16 '#{destination}' rate -v -L #{sample_rate} dither"]
+        return ["#{sox_exe} \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
       end
 
       # If we determined that we need to downsample, use SoX to do so, otherwise
       # just decode to WAV
       flac_decoder = if resample_required
-          "#{sox_exe} '#{source}' -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
+          "#{sox_exe} \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
         else
           # Decodes FLAC to WAV, writing to STDOUT
-          "#{flac_exe} -dcs -- '#{source}'"
+          "#{flac_exe} -dcs -- \"#{source}\""
         end
 
       transcode_steps = [flac_decoder]
 
       transcode_steps << case ENCODERS[encoding][:enc]
       when "lame"
-        "#{lame_exe} --quiet #{ENCODERS[encoding][:opts]} - '#{destination}'"
+        "#{lame_exe} --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
       when "flac"
-        "#{flac_exe} #{ENCODERS[encoding][:opts]} -o '#{destination}' -"
+        "#{flac_exe} -s #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
       end
 
       transcode_steps
