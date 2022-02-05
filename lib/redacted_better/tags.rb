@@ -17,6 +17,11 @@ module RedactedBetter
 
     # Copies all relevant file tags from an input FLAC file to a destination FLAC
     # or MP3 file, given the absolute file paths to each.
+    #
+    # @parm source [String]
+    # @parm destination [String]
+    #
+    # @return [Boolean] true if successful
     def self.copy_tags(source, destination)
       case File.extname(destination).downcase
       when ".flac"
@@ -45,27 +50,17 @@ module RedactedBetter
       true # TODO: Implement this
     end
 
-    # Copies all relevant file tags given a source and destination instance of
-    # FlacInfo.
+    # Destructively copies all tags from one FLAC to another.
     #
-    # @param source [FlacInfo]
-    # @param destination [FlacInfo]
+    # @param source [String]
+    # @param destination [String]
     #
     # @return [Boolean] true if set successfully, false otherwise
     def self.copy_tags_to_flac(source, destination)
-      source = FlacInfo.new(source)
-      destination = FlacInfo.new(destination)
+      `metaflac --no-utf8-convert --export-tags-to=- \"#{source}\" | \
+       metaflac --remove-all-tags --import-tags-from=- \"#{destination}\"`
 
-      source.tags.each do |name, value|
-        next unless allowed_tags.include? name
-
-        destination.comment_add("#{name}=#{value}")
-      end
-
-      destination.update!
-    rescue FlacInfoError, FlacInfoReadError, FlacInfoWriteError => e
-      Log.error("  Error reading/writing FLAC: #{e.inspect}")
-      false
+      $?.success?
     end
 
     # Copies all relevant file tags from a FLAC file to an MP3 file, given the
