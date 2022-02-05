@@ -36,6 +36,8 @@ module RedactedBetter
     # @param data_hash [Hash] the data hash which comes directly from the Redacted
     #   JSON API
     def initialize(data_hash)
+      data_hash = Utils.deep_unescape_html(data_hash)
+
       @id = data_hash["id"]
       @name = data_hash["name"]
       @artists = data_hash["musicInfo"]["artists"]

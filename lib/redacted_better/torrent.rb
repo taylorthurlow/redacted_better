@@ -47,6 +47,8 @@ module RedactedBetter
     # @param group [Group] the torrent group to which this torrent belongs
     # @param download_directory [String] the path to the download directory
     def initialize(data_hash, group, download_directory)
+      data_hash = Utils.deep_unescape_html(data_hash)
+
       @group = group
       @id = data_hash["id"]
       @media = data_hash["media"]
