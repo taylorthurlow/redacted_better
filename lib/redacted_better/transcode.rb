@@ -1,4 +1,5 @@
 require "fileutils"
+require "os"
 
 module RedactedBetter
   class Transcode
@@ -163,6 +164,19 @@ module RedactedBetter
       # Create final output directory and copy the finished transcode from the
       # temp directory into it
       FileUtils.cp_r(File.join(temp_torrent_dir), output_directory)
+
+      if OS.mac?
+        spinner&.update(text: " - Normalizing unicode file paths and names...")
+        `command -v convmv`
+
+        raise "Could not find `convmv` command, required on macOS." unless $?.success?
+
+        _stdout, _stderr, status = Open3.capture3("convmv -r -f UTF-8 -t UTF-8 --nfc --notest \"#{torrent_dir}\"")
+
+        unless status.success?
+          spinner&.error(Pastel.new.red("Failed to normalize torrent file names to NFC unicode."))
+        end
+      end
 
       spinner&.update(text: "")
 
