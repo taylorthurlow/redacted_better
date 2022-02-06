@@ -149,6 +149,8 @@ module RedactedBetter
 
       return false if torrent_files.none?
 
+      return true if @opts[:skip_upload]
+
       spinners = TTY::Spinner::Multi.new("[:spinner] Uploading torrents:")
 
       torrent_files.each do |torrent_file|
@@ -254,6 +256,7 @@ module RedactedBetter
         o.string "-k", "--api-key", "your redacted API key"
         o.string "--cache-path", "path to an alternate cache file"
         o.bool "--delete-cache", "invalidate the current cache"
+        o.bool "--skip-upload", "skip uploading to RED"
         o.string "-t", "--torrent", "run for a single torrent, given a URL"
         o.bool "-h", "--help", "print help"
         o.on "-v", "--version", "print the version" do
