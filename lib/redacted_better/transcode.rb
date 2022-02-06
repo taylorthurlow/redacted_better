@@ -46,8 +46,8 @@ module RedactedBetter
 
       if errors.none?
         # Copy the tags from the old file to the new file
-        tags_success = Tags.copy_tags(source, destination)
-        errors << "Error copying tags for #{File.basename(source)}." unless tags_success
+
+        errors += Tags.copy_tags(source, destination)
       end
 
       {
@@ -150,14 +150,11 @@ module RedactedBetter
 
         result = Transcode.new(format, encoding, file_path, destination_file).process
 
-        unless result[:exit_code].zero?
-          spinner&.error(Pastel.new.red("(transcode failed with exit code #{result[:exit_code]})"))
+        if !result[:exit_code].zero? || result[:errors].any?
+          errors = result[:errors] || []
+          errors.prepend("Exit code #{result[:exit_code]}") unless result[:exit_code].zero?
 
-          return false
-        end
-
-        if result[:errors].any?
-          spinner&.error(result[:errors].join(", "))
+          spinner&.error(Pastel.new.red("Transcode failed: #{errors.join(", ")}"))
 
           return false
         end

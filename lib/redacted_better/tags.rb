@@ -1,4 +1,5 @@
 require "mp3info"
+require "open3"
 
 module RedactedBetter
   class Tags
@@ -21,20 +22,16 @@ module RedactedBetter
     # @parm source [String]
     # @parm destination [String]
     #
-    # @return [Boolean] true if successful
+    # @return [Array<String>] errors that occurred, if any
     def self.copy_tags(source, destination)
       case File.extname(destination).downcase
       when ".flac"
-        result = copy_tags_to_flac(source, destination)
+        copy_tags_to_flac(source, destination)
       when ".mp3"
-        result = copy_tags_to_mp3(source, destination)
+        copy_tags_to_mp3(source, destination)
       else
         raise "Tried to copy tags to a destination with an unknown file extension."
       end
-
-      check_tags_equal(source, destination)
-
-      result
     end
 
     private
@@ -55,12 +52,62 @@ module RedactedBetter
     # @param source [String]
     # @param destination [String]
     #
-    # @return [Boolean] true if set successfully, false otherwise
+    # @return [Array<String>] errors that occurred, if any
     def self.copy_tags_to_flac(source, destination)
-      `metaflac --no-utf8-convert --export-tags-to=- \"#{source}\" | \
-       metaflac --remove-all-tags --import-tags-from=- \"#{destination}\"`
+      errors = []
 
-      $?.success?
+      # Save tags to a file because piping them back into metaflac causes issues
+      # with tags that have newlines.
+      temp_tags_file = File.join(Dir.mktmpdir, File.basename(source))
+      export_command = "metaflac --no-utf8-convert --export-tags-to=\"#{temp_tags_file}\" \"#{source}\""
+
+      _stdout, stderr, status = Open3.capture3(export_command)
+
+      errors << "Exit code #{status.exitstatus}" unless status.success?
+      errors << stderr.tr("\n", " ") unless stderr.nil? || stderr.empty?
+
+      return errors if errors.any?
+
+      # This routine takes an existing tags file, which consists of KEY=VALUE
+      # pairs, and removes any key value pair that spans multiple lines. This is
+      # because loading tags back into the new FLAC file with `metaflac` is
+      # currently broken when trying to load multi-line tags.
+      # GH issue: https://github.com/xiph/flac/issues/232
+      new_tags_file_path = begin
+          file = Tempfile.new("tags")
+          source_tags_lines = File.readlines(temp_tags_file)
+
+          source_tags_lines.each_with_index do |line, i|
+            current_line_has_equal = line.include?("=")
+            next_line_exists = !source_tags_lines[i + 1].nil?
+
+            if next_line_exists
+              next_line = source_tags_lines[i + 1]
+              next_line_has_equal = next_line.include?("=")
+
+              if current_line_has_equal && next_line_has_equal
+                file.write(line)
+              elsif current_line_has_equal && !next_line_has_equal
+                next
+              end
+            elsif current_line_has_equal
+              file.write(line)
+            end
+          end
+
+          file.path
+        ensure
+          file&.close
+        end
+
+      import_command = "metaflac --remove-all-tags --import-tags-from=\"#{new_tags_file_path}\" \"#{destination}\""
+
+      _stdout, stderr, status = Open3.capture3(import_command)
+
+      errors << "Exit code #{status.exitstatus}" unless status.success?
+      errors << stderr.tr("\n", " ") unless stderr.nil? || stderr.empty?
+
+      errors
     end
 
     # Copies all relevant file tags from a FLAC file to an MP3 file, given the
@@ -80,15 +127,14 @@ module RedactedBetter
       end
 
       destination.close
-      true
+
+      []
     rescue FlacInfoError, FlacInfoReadError, FlacInfoWriteError => e
-      Log.error("  Error reading/writing FLAC: #{e.inspect}")
-      false
+      ["Error reading/writing FLAC: #{e.inspect}"]
     rescue Mp3InfoError => e
-      Log.error("  Problem reading/writing MP3: #{e.inspect}")
-      false
+      ["Problem reading/writing MP3: #{e.inspect}"]
     rescue TypeError => e
-      Log.error("  Problem reading/writing file: #{e.inspect}")
+      ["Problem reading/writing file: #{e.inspect}"]
     end
 
     # Determines whether or not the tags on a given FLAC file are valid with
@@ -134,8 +180,7 @@ module RedactedBetter
 
       errors
     rescue FlacInfoError, FlacInfoReadError, FlacInfoWriteError => e
-      Log.error("  Error reading/writing FLAC: #{e.inspect}")
-      false
+      ["Error reading/writing FLAC: #{e.inspect}"]
     end
 
     # Compiles a list of all problems with the tags of a given MP3 file.
@@ -165,8 +210,7 @@ module RedactedBetter
 
       errors
     rescue Mp3InfoError => e
-      Log.error("  Problem reading/writing MP3: #{e.inspect}")
-      false
+      ["Problem reading/writing MP3: #{e.inspect}"]
     end
 
     def self.valid_track_tag?(tag)
