@@ -37,6 +37,7 @@ module RedactedBetter
     #   JSON API
     def initialize(data_hash)
       data_hash = Utils.deep_unescape_html(data_hash)
+      data_hash = Utils.deep_unicode_normalize(data_hash)
 
       @id = data_hash["id"]
       @name = data_hash["name"]

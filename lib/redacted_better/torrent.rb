@@ -48,6 +48,7 @@ module RedactedBetter
     # @param download_directory [String] the path to the download directory
     def initialize(data_hash, group, download_directory)
       data_hash = Utils.deep_unescape_html(data_hash)
+      data_hash = Utils.deep_unicode_normalize(data_hash)
 
       @group = group
       @id = data_hash["id"]
