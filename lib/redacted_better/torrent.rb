@@ -219,12 +219,8 @@ module RedactedBetter
 
       torrent_file = File.join(Dir.mktmpdir, torrent_string)
 
-      # TODO : Allow config
-      # mktorrent_exe = $config.fetch(:executables, :mktorrent) || "mktorrent"
-      mktorrent_exe = "mktorrent"
-
       tracker_url = "https://flacsfor.me/#{passkey}/announce"
-      `#{mktorrent_exe} -s RED -p -a #{tracker_url} -o "#{torrent_file}" -l 18 "#{output_directory}"`
+      `mktorrent -s RED -p -a #{tracker_url} -o "#{torrent_file}" -l 18 "#{output_directory}"`
 
       if $?.exitstatus.zero?
         torrent_file

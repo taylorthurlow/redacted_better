@@ -22,15 +22,3 @@ directories:
   # Where the .torrent files for finished transcodes will be placed
   # Ex: "/media/data/torrents/redacted_upload/torrent_files"
   torrents:
-
-# This section allows you to configure the paths to various software
-# executables used by the program. If left blank, just the executable name will
-# be used, meaning that the executable will be looked for in all directories
-# contained in the $PATH shell variable. This is typically just fine. To
-# override any of these executables, provide an absolute path to the
-# executable, for example: "/usr/local/bin/flac"
-executables:
-  flac:
-  sox:
-  lame:
-  mktorrent:

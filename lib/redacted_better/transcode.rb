@@ -65,36 +65,28 @@ module RedactedBetter
     #
     # @return [Array<String>]
     def command_list(resample_required, sample_rate)
-      # TODO: Allow configuration
-      sox_exe = "sox"
-      flac_exe = "flac"
-      lame_exe = "lame"
-      # sox_exe = $config.fetch(:executables, :sox) || "sox"
-      # flac_exe = $config.fetch(:executables, :flac) || "flac"
-      # lame_exe = $config.fetch(:executables, :lame) || "lame"
-
       # If we're just resampling a FLAC to another FLAC, just use SoX to do
       # that, and skip the rest of the transcode process
       if format == "FLAC" && resample_required
-        return ["#{sox_exe} \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
+        return ["sox \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
       end
 
       # If we determined that we need to downsample, use SoX to do so, otherwise
       # just decode to WAV
       flac_decoder = if resample_required
-          "#{sox_exe} \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
+          "sox \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
         else
           # Decodes FLAC to WAV, writing to STDOUT
-          "#{flac_exe} -dcs -- \"#{source}\""
+          "flac -dcs -- \"#{source}\""
         end
 
       transcode_steps = [flac_decoder]
 
       transcode_steps << case ENCODERS[encoding][:enc]
       when "lame"
-        "#{lame_exe} --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
+        "lame --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
       when "flac"
-        "#{flac_exe} -s #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
+        "flac -s #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
       end
 
       transcode_steps
