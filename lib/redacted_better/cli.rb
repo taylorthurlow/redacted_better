@@ -23,6 +23,8 @@ module RedactedBetter
 
     # @return [void]
     def start
+      check_utilities_installed
+
       @opts.args.each do |arg|
         url_data = parse_torrent_url(arg)
         torrent = @api.torrent(url_data[:torrent_id], @download_directory)
@@ -296,6 +298,17 @@ module RedactedBetter
         "mediainfo" => `mediainfo --version`.gsub("\n", " ").strip,
         "convmv" => convmv || "not installed",
       }
+    end
+
+    # @return [void]
+    def check_utilities_installed
+      %w[flac sox mktorrent lame mediainfo].each do |command|
+        `command -v #{command}`
+
+        next if $?.success?
+
+        raise "Could not find executable: #{command}"
+      end
     end
 
     # @param string [String]
