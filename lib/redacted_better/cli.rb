@@ -10,17 +10,8 @@ module RedactedBetter
         exit
       end
 
-      # $quiet = @opts[:quiet]
-      # $cache = SnatchCache.new(@opts[:cache_path], @opts[:delete_cache])
-      # $account = Account.new(@opts[:username], @opts[:password])
-      # $api = RedactedAPI.new(user_id: $account.user_id, cookie: $account.cookie)
-
       @config = Config.new(@opts[:config])
       @api = RedactedApi.new(@config.fetch(:api_key))
-      @snatch_cache = SnatchCache.new(
-        @config.fetch(:cache_path),
-        @config.fetch(:delete_cache),
-      )
 
       @download_directory = @config.fetch(:directories, :download)
       @output_directory = @config.fetch(:directories, :output)
@@ -31,62 +22,16 @@ module RedactedBetter
 
     # @return [void]
     def start
-      if @opts[:torrent]
-        handle_single
-      else
-        handle_all_snatched
+      @opts.args.each do |arg|
+        url_data = parse_torrent_url(arg)
+        torrent = @api.torrent(url_data[:torrent_id], @download_directory)
+        torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
+
+        handle_found_release(torrent_group, torrent)
       end
     end
 
     private
-
-    def handle_single
-      url_data = parse_torrent_url(@opts[:torrent])
-      torrent = @api.torrent(url_data[:torrent_id], @download_directory)
-      torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
-
-      @snatch_cache.add(torrent)
-
-      success = handle_found_release(torrent_group, torrent)
-
-      @snatch_cache.remove(torrent) unless success
-    end
-
-    def handle_all_snatched
-      seeding = @api.user_torrents(@user["id"], type: :seeding)
-
-      spinner = TTY::Spinner.new("[:spinner] Processing seeding list: :current")
-      spinner.auto_spin
-      seeding.each do |seeded|
-        spinner.update(current: seeded[:torrent_group_name])
-
-        next if @snatch_cache.contains?(seeded[:torrent_id])
-
-        torrent = @api.torrent(seeded[:torrent_id], @download_directory)
-        @snatch_cache.add(torrent)
-
-        torrent_group = @api.torrent_group(seeded[:torrent_group_id], @download_directory)
-
-        success = handle_found_release(torrent_group, torrent)
-
-        @snatch_cache.remove(torrent) unless success
-      end
-    end
-
-    # @param group [Group]
-    # @param torrent [Torrent]
-    #
-    # @return [void]
-    def handle_snatch(group, torrent)
-      return if @cache.contains?(snatch[:torrent_id])
-
-      if torrent
-        handle_found_release(group, torrent)
-      else
-        Log.warning("Unable to find torrent #{snatch[:torrent_id]} in group #{snatch[:group_id]}.")
-      end
-      Log.info("")
-    end
 
     # @param group [Group]
     # @param torrent [Torrent]
@@ -121,11 +66,7 @@ module RedactedBetter
         # formats_missing << ["FLAC", "Lossless"] if fixed
       end
 
-      if formats_missing.none?
-        @snatch_cache.add(torrent)
-
-        return true
-      end
+      return true if formats_missing.none?
 
       if (invalid_tagged_files = torrent.flac_files_with_invalid_tags).any?
         Log.warning("  One or more files has invalid tags, skipping.")
@@ -349,10 +290,7 @@ module RedactedBetter
         o.string "-c", "--config", "path to an alternate config file"
         o.bool "-q", "--quiet", "only print to STDOUT when errors occur"
         o.string "-k", "--api-key", "your redacted API key"
-        o.string "--cache-path", "path to an alternate cache file"
-        o.bool "--delete-cache", "invalidate the current cache"
         o.bool "--skip-upload", "skip uploading to RED"
-        o.string "-t", "--torrent", "run for a single torrent, given a URL"
         o.bool "-h", "--help", "print help"
         o.on "-v", "--version", "print the version" do
           puts RedactedBetter::VERSION

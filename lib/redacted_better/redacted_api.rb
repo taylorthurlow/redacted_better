@@ -61,65 +61,6 @@ module RedactedBetter
       end
     end
 
-    # Get a list of torrents associated with a given user.
-    #
-    # @param user_id [Integer] ID number of the user
-    # @param type [Symbol] the type of torrents to look up - valid options are
-    #   `:snatched`, `:seeding`, `:leeching`, and `:uploaded`
-    #
-    # @return [Array<Hash>]
-    def user_torrents(user_id, type:)
-      unless %i[snatched seeding leeching uploaded].include?(type)
-        raise "Unknown user torrent search type: #{type}"
-      end
-
-      finished = false
-      result = []
-
-      spinner = TTY::Spinner.new("[:spinner] Fetching #{type} torrents page :page_number...")
-      spinner.update(page_number: 1)
-      spinner.auto_spin
-
-      page = 1
-      per_page = 500
-
-      until finished
-        spinner.update(page_number: page)
-
-        response = get(
-          action: "user_torrents",
-          params: {
-            id: user_id,
-            type: type.to_s,
-            limit: per_page,
-            offset: (page * per_page) - 500,
-          },
-        )
-
-        # Get a list of entries where an artist ID is present, because we need
-        # to filter out non-music torrents
-        entries = response.data[type.to_s]
-          .reject { |d| d["artistId"].nil? }
-
-        if entries.any?
-          result += entries.map do |torrent|
-            {
-              torrent_group_id: torrent["groupId"],
-              torrent_group_name: torrent["name"],
-              torrent_id: torrent["torrentId"],
-            }
-          end
-
-          page += 1
-        else
-          finished = true
-          spinner.success(Pastel.new.green("done."))
-        end
-      end
-
-      result
-    end
-
     # Fetch a torrent from the API.
     #
     # @param id [Integer]

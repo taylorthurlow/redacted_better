@@ -9,10 +9,7 @@ class FakeRedacted < Sinatra::Base
   end
 
   get "/torrents.php" do
-    if user_snatched_flacs_params
-      status 200
-      response_file("snatched_flacs.html")
-    elsif edit_torrent_params_get
+    if edit_torrent_params_get
       status 200
       if params["should_fail"]
         response_file("torrent_edit_403.html")
