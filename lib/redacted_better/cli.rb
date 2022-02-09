@@ -1,3 +1,4 @@
+require "digest"
 require "slop"
 
 module RedactedBetter
@@ -168,41 +169,73 @@ module RedactedBetter
 
       ready_uploads.each do |upload|
         spinners.register("[:spinner] #{upload.fetch(:format)} #{upload.fetch(:encoding)}:text") do |sp|
-          sp.update(text: " - Uploading...")
+          sp.update(text: " - Generating descriptions...")
 
           release_description = <<~DESCRIPTION
             This torrent was transcoded/compiled by redacted_better v#{RedactedBetter::VERSION}, an automated script.
 
             Transcoded from: #{torrent.url}
 
+            [quote][pre]#{libraries_breakdown.to_yaml.split("\n")[1..].join("\n")}[/pre][/quote]
+
           DESCRIPTION
 
-          upload.fetch(:transcodes).each do |transcode|
+          spectrals = []
+          if @config.fetch(:ptpimg_api_key, default: nil) && upload.fetch(:format) == "FLAC"
+            ptpimg_client = Ptpimg.new(@config.fetch(:ptpimg_api_key))
+          end
+
+          upload.fetch(:transcodes).each.with_index do |transcode, i|
             commands = transcode.command_list
                                 .join("\n")
                                 .gsub(upload.fetch(:temp_dir), "/anon_temp_dir")
-                                .gsub(@torrents_directory, "/anon_torrents_dir")
-                                .gsub(@output_directory, "/anon_output_dir")
-                                .gsub(@download_directory, "/anon_download_dir")
+
+            final_file = File.join(@output_directory, upload.fetch(:name), File.basename(transcode.destination))
+
+            if ptpimg_client
+              sp.update(text: " - Generating spectrogram #{i + 1}...")
+              spectrals << generate_spectrogram(final_file)
+            end
 
             release_description << <<~DESCRIPTION
-              [spoiler="#{File.basename(transcode.destination)}"]
-                Libraries:
-                  TODO
-
-                Pipeline:
+              [hide="#{File.basename(transcode.destination)}"]
+                [quote][pre]#{`mediainfo "#{final_file}"`.chomp}[/pre][/quote]
 
                 [pre]#{commands}[/pre]
 
-                Spectrals:
-                  TODO
-              [/spoiler]
+                #{"{{spectral-#{i + 1}}}" if ptpimg_client}
+              [/hide]
             DESCRIPTION
           end
+
+          # TODO: Skip spectrals if ptpimg api key not configured
+
+          if ptpimg_client
+            sp.update(text: " - Uploading spectrograms...")
+
+            if (images = ptpimg_client.upload(spectrals))
+              spectrals.each_with_index do |spectral_path, i|
+                release_description.gsub!(
+                  "{{spectral-#{i + 1}}}",
+                  <<~REPLACE,
+                  [img]#{images.fetch(spectral_path)}[/img]
+                REPLACE
+                )
+              end
+            else
+              spectrals.each_with_index do |_, i|
+                release_description.gsub!("{{spectral-#{i + 1}}}", "Failure to upload, sorry!")
+              end
+            end
+          end
+
+          release_description = sanitize_personal_paths(release_description)
 
           File.open("out.txt", "w") { |f| f.write(release_description) }
 
           sp.success("skipped temporarily while testing")
+
+          # sp.update(text: " - Uploading to RED...")
           # if @api.upload_transcode(
           #   torrent,
           #   upload.fetch(:format),
@@ -231,24 +264,6 @@ module RedactedBetter
     #   end
     # end
 
-    # Transcode a torrent to a target format.
-    #
-    # @param torrent [Torrent] the torrent to transcode
-    # @param format [String]
-    # @param encoding [String]
-    # @param spinner [TTY::Spinner, nil]
-    #
-    # @return [String, nil] the path to the created torrent file, otherwise nil
-    #   if a problem occurred
-    def perform_transcode(torrent, format, encoding, spinner = nil)
-      if (result = Transcode.transcode(torrent, format, encoding, @output_directory, spinner))
-      end
-
-      spinner.error(Pastel.new.red("failed."))
-
-      nil
-    end
-
     # Takes a URL, meant to be provided on as a command-line parameter, and
     # extracts the group and torrent ids from it. The URL format is:
     # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
@@ -267,6 +282,34 @@ module RedactedBetter
       { group_id: match[1].to_i, torrent_id: match[2].to_i }
     end
 
+    # @return [Hash{String=>String}]
+    def libraries_breakdown
+      convmv = begin
+          `convmv --help`.split("\n")
+                         .find { |l| l.start_with?("convmv ") }
+                         &.gsub(/ - .+$/, "")
+        rescue Errno::ENOENT
+          nil
+        end
+
+      {
+        "flac" => `flac -v`.strip,
+        "sox" => `sox --version`.strip.gsub(/^sox:\s+/, ""),
+        "mktorrent" => `mktorrent -h`.split("\n").first.strip,
+        "lame" => `lame --version`.split("\n").first,
+        "convmv" => convmv || "not installed",
+      }
+    end
+
+    # @param string [String]
+    #
+    # @return [String]
+    def sanitize_personal_paths(string)
+      string.gsub(@torrents_directory, "/anon_torrents_dir")
+            .gsub(@output_directory, "/anon_output_dir")
+            .gsub(@download_directory, "/anon_download_dir")
+    end
+
     # @return [Hash] authenticated user data
     def confirm_api_connection
       spinner = TTY::Spinner.new("[:spinner] Authenticating...")
@@ -282,6 +325,30 @@ module RedactedBetter
         spinner.error("failed to authenticate, check your API key.")
         exit 1
       end
+    end
+
+    # @param file_path [String]
+    #
+    # @return [String, nil] the full image path, or nil if failed
+    def generate_spectrogram(file_path)
+      name = File.basename(file_path)
+
+      # Memoize the generated file based on the MD5 of the input file - this way
+      # we send the same image to ptpimg, which is smart enough to give us back
+      # the same URL and not waste storage.
+      file = File.open(file_path)
+      md5 = Digest::MD5.file(file)
+      out_path = File.join(Dir.tmpdir, "#{md5}-spectrogram.png")
+
+      if File.exist?(out_path)
+        out_path
+      else
+        `sox "#{file_path}" -n remix 1 spectrogram -x 1500 -y 500 -z 120 -w Kaiser -t "#{name}" -o "#{out_path}"`
+
+        out_path if $?.success?
+      end
+    ensure
+      file&.close
     end
 
     # @return [Slop::Result]
