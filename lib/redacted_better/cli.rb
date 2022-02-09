@@ -231,22 +231,18 @@ module RedactedBetter
 
           release_description = sanitize_personal_paths(release_description)
 
-          File.open("out.txt", "w") { |f| f.write(release_description) }
-
-          sp.success("skipped temporarily while testing")
-
-          # sp.update(text: " - Uploading to RED...")
-          # if @api.upload_transcode(
-          #   torrent,
-          #   upload.fetch(:format),
-          #   upload.fetch(:encoding),
-          #   upload.fetch(:file),
-          #   release_description,
-          # )
-          #   sp.success("successfully uploaded!")
-          # else
-          #   sp.error("failed.")
-          # end
+          sp.update(text: " - Uploading to RED...")
+          if @api.upload_transcode(
+            torrent,
+            upload.fetch(:format),
+            upload.fetch(:encoding),
+            upload.fetch(:file),
+            release_description,
+          )
+            sp.success("successfully uploaded!")
+          else
+            sp.error("failed.")
+          end
         end
       end
 
