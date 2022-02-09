@@ -134,34 +134,145 @@ module RedactedBetter
         return false
       end
 
-      torrent_files = []
+      ready_uploads = []
       spinners = TTY::Spinner::Multi.new("[:spinner] Processing missing formats:")
 
       formats_missing.each do |format, encoding|
-        spinners.register("[:spinner] #{format} #{encoding}:text") do |sp|
-          if (torrent_file = perform_transcode(torrent, format, encoding, sp))
-            torrent_files << { file: torrent_file, format: format, encoding: encoding }
+        # Temporary container to store data for this pass
+        ready_upload = { transcodes: [] }
+
+        spinners.register("[:spinner] #{format} #{encoding}:text") do |spinner|
+          # Determine the new torrent directory name
+          torrent_name = Torrent.build_string(
+            torrent.group.artist,
+            torrent.group.name,
+            torrent.year,
+            torrent.media,
+            Torrent.build_format(format, encoding),
+          )
+
+          ready_upload[:name] = torrent_name
+
+          # Get final output dir and make sure it doesn't already exist
+          torrent_dir = File.join(@output_directory, torrent_name)
+
+          if Dir.exist?(torrent_dir)
+            spinner&.update(text: " - Failed")
+            spinner&.error(Pastel.new.red("(output directory exists)"))
+
+            next
           end
+
+          temp_torrent_dir = File.join(Dir.mktmpdir, torrent_name)
+          ready_upload[:temp_dir] = temp_torrent_dir
+          FileUtils.mkdir_p(temp_torrent_dir)
+
+          torrent.flac_files.each do |file_path|
+            spinner&.update(text: " - #{File.basename(file_path)}")
+            new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
+            destination_file = File.join(temp_torrent_dir, new_file_name)
+
+            transcode = Transcode.new(format, encoding, file_path, destination_file)
+
+            if transcode.errors.any?
+              spinner&.error(Pastel.new.red("Transcode failed: #{transcode.errors.join(", ")}"))
+
+              return false
+            end
+
+            if transcode.process
+              ready_upload[:transcodes] << transcode
+            else
+              spinner&.error(Pastel.new.red("Transcode failed: #{transcode.errors.join(", ")}"))
+
+              return false
+            end
+          end
+
+          # Create final output directory and copy the finished transcode from
+          # the temp directory into it
+          FileUtils.mv(temp_torrent_dir, @output_directory)
+
+          spinner&.update(text: " - Creating .torrent file...")
+
+          torrent_file = torrent.make_torrent(
+            torrent_dir,
+            format,
+            encoding,
+            @user["passkey"],
+          )
+
+          FileUtils.cp(torrent_file, @torrents_directory)
+
+          spinner.update(text: "")
+          spinner.success(Pastel.new.green("Completed successfully."))
+
+          ready_uploads << ready_upload.merge(
+            file: torrent_file,
+            format: format,
+            encoding: encoding,
+          )
+        ensure
+          FileUtils.remove_dir(temp_torrent_dir, true) if temp_torrent_dir
         end
       end
 
       spinners.auto_spin
 
-      return false if torrent_files.none?
+      return false if ready_uploads.none?
 
       return true if @opts[:skip_upload]
 
       spinners = TTY::Spinner::Multi.new("[:spinner] Uploading torrents:")
 
-      torrent_files.each do |torrent_file|
-        spinners.register("[:spinner] #{torrent_file[:format]} #{torrent_file[:encoding]}:text") do |sp|
+      ready_uploads.each do |upload|
+        spinners.register("[:spinner] #{upload.fetch(:format)} #{upload.fetch(:encoding)}:text") do |sp|
           sp.update(text: " - Uploading...")
 
-          if @api.upload_transcode(torrent, torrent_file[:format], torrent_file[:encoding], torrent_file[:file])
-            sp.success("successfully uploaded!")
-          else
-            sp.error("failed.")
+          release_description = <<~DESCRIPTION
+            This torrent was transcoded/compiled by redacted_better v#{RedactedBetter::VERSION}, an automated script.
+
+            Transcoded from: #{torrent.url}
+
+          DESCRIPTION
+
+          upload.fetch(:transcodes).each do |transcode|
+            commands = transcode.command_list
+                                .join("\n")
+                                .gsub(upload.fetch(:temp_dir), "/anon_temp_dir")
+                                .gsub(@torrents_directory, "/anon_torrents_dir")
+                                .gsub(@output_directory, "/anon_output_dir")
+                                .gsub(@download_directory, "/anon_download_dir")
+
+            release_description << <<~DESCRIPTION
+              [spoiler="#{File.basename(transcode.destination)}"]
+                Libraries:
+                  TODO
+
+                Pipeline:
+
+                [pre]#{commands}[/pre]
+
+                Spectrals:
+                  TODO
+              [/spoiler]
+            DESCRIPTION
           end
+
+          File.open("out.txt", "w") { |f| f.write(release_description) }
+
+          sp.success("skipped temporarily while testing")
+          # if @api.upload_transcode(
+          #   torrent,
+          #   upload.fetch(:format),
+          #   upload.fetch(:encoding),
+          #   upload.fetch(:file),
+          #   release_description,
+          # )
+          #   sp.success("successfully uploaded!")
+          # else
+          #   sp.error("failed.")
+          # end
         end
       end
 
@@ -190,23 +301,6 @@ module RedactedBetter
     #   if a problem occurred
     def perform_transcode(torrent, format, encoding, spinner = nil)
       if (result = Transcode.transcode(torrent, format, encoding, @output_directory, spinner))
-        spinner&.update(text: " - Creating .torrent file...")
-
-        torrent_file = torrent.make_torrent(
-          result,
-          format,
-          encoding,
-          @user["passkey"],
-        )
-
-        FileUtils.cp(torrent_file, @torrents_directory)
-
-        if torrent_file
-          spinner.update(text: "")
-          spinner.success(Pastel.new.green("Completed successfully."))
-
-          return torrent_file
-        end
       end
 
       spinner.error(Pastel.new.red("failed."))

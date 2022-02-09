@@ -169,9 +169,10 @@ module RedactedBetter
     # @param format [String]
     # @param encoding [String]
     # @param torrent_file_path [String]
+    # @param release_description [String]
     #
     # @return [void]
-    def upload_transcode(source_torrent, format, encoding, torrent_file_path)
+    def upload_transcode(source_torrent, format, encoding, torrent_file_path, release_description)
       body_data = {
         file_input: Faraday::FilePart.new(File.open(torrent_file_path), "application/x-bittorrent"),
         type: source_torrent.group.category_id - 1,
@@ -193,10 +194,7 @@ module RedactedBetter
         vanity_house: source_torrent.group.vanity_house,
         media: source_torrent.media,
         groupid: source_torrent.group.id,
-        release_desc: <<~DESC.strip.tr("\n", " "),
-          This torrent was generated and uploaded by redacted_better
-          v#{RedactedBetter::VERSION}.
-        DESC
+        release_desc: release_description,
       }
 
       body_data[:scene] = true if source_torrent.scene

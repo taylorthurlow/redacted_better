@@ -220,13 +220,12 @@ module RedactedBetter
       torrent_file = File.join(Dir.mktmpdir, torrent_string)
 
       tracker_url = "https://flacsfor.me/#{passkey}/announce"
-      `mktorrent -s RED -p -a #{tracker_url} -o "#{torrent_file}" -l 18 "#{output_directory}"`
 
-      if $?.exitstatus.zero?
-        torrent_file
-      else
-        nil
-      end
+      _stdout, _stderr, status = Open3.capture3(
+        "mktorrent -s RED -p -a \"#{tracker_url}\" -o \"#{torrent_file}\" -l 18 \"#{output_directory}\""
+      )
+
+      torrent_file if status.exitstatus.zero?
     end
 
     # Determines if two torrents are members of the same release group.

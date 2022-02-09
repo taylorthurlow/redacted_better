@@ -2,6 +2,8 @@ require "fileutils"
 require "os"
 
 module RedactedBetter
+  # A class representing the transcode/conversion of a single audio file into
+  # another audio file.
   class Transcode
     ENCODERS = {
       "320" => { enc: "lame", ext: "mp3", opts: "-h -b 320 --ignore-tag-errors" },
@@ -22,6 +24,13 @@ module RedactedBetter
     # @return [String]
     attr_accessor :destination
 
+    # @return [Array<String>]
+    attr_accessor :errors
+
+    # @return [Integer, nil] sample rate in hertz (48kHz == 48_000Hz), or nil if
+    #   the source does not have a compatible sample rate
+    attr_accessor :target_sample_rate
+
     # @param format [String]
     # @param encoding [String]
     # @param source [String]
@@ -31,65 +40,82 @@ module RedactedBetter
       @encoding = encoding
       @source = source
       @destination = destination
+
+      # TODO: Use flac -t to test output flacs
+
+      @errors = []
+
+      # Validate bit depth
+      source_bit_depth = flac_info.streaminfo["bits_per_sample"]
+      @errors << "Invalid source bit depth: #{source_bit_depth}" unless [16, 24].include?(source_bit_depth)
+
+      # Validate number of audio channels
+      source_num_channels = flac_info.streaminfo["channels"]
+      @errors << "Invalid source number of channels: #{source_num_channels}" if source_num_channels > 2
+
+      # Determine target sample rate
+      @target_sample_rate = begin
+          source_sample_rate = flac_info.streaminfo["samplerate"]
+
+          if source_sample_rate % 48_000
+            48_000
+          elsif source_sample_rate % 44_100
+            44_100
+          else
+            @errors << "Unable to determine appropriate new sample rate for source rate: #{source_sample_rate}"
+
+            nil
+          end
+        end
     end
 
-    # Transcode the file.
+    # Transcode the file to the specified destination.
     #
-    # @return [Hash]
+    # @return [Boolean] True if successful, false otherwise. View any propagated
+    #   errors with the `error` attribute accessor.
     def process
-      # Check for any problems with the source file
-      resample_required, required_sample_rate, sample_rate_errors = check_sample_rate
-      errors = sample_rate_errors.flatten
+      raise "Cannot process transcode with errors present." if errors.any?
 
-      # Get the list of commands which are piped together to get the final file
-      cmds = command_list(resample_required, required_sample_rate)
-      `#{cmds.join(" | ")}` if errors.none?
+      _stdout, _stderr, status = Open3.capture3(command_list.join(" | "))
 
-      if errors.none?
-        # Copy the tags from the old file to the new file
+      @errors << "Transcode pipeline exited with non-zero code: #{status.exitstatus}" unless status.success?
+      @errors += Tags.copy_tags(source, destination)
+      @errors += normalize_unicode(destination) if OS.mac?
 
-        errors += Tags.copy_tags(source, destination)
-      end
-
-      {
-        exit_code: $?.exitstatus,
-        errors: errors,
-      }
+      destination if @errors.none?
     end
 
     # Builds a list of steps required to transcode a FLAC into the specified
     # format, performing resampling if required
     #
-    # @param resample_required [Boolean]
-    # @param sample_rate [Integer]
-    #
     # @return [Array<String>]
-    def command_list(resample_required, sample_rate)
-      # If we're just resampling a FLAC to another FLAC, just use SoX to do
-      # that, and skip the rest of the transcode process
-      if format == "FLAC" && resample_required
-        return ["sox \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{sample_rate} dither"]
-      end
+    def command_list
+      raise "Cannot build command list with errors present." if errors.any?
 
-      # If we determined that we need to downsample, use SoX to do so, otherwise
-      # just decode to WAV
-      flac_decoder = if resample_required
-          "sox \"#{source}\" -qG -b 16 -t wav - rate -v -L #{sample_rate} dither"
-        else
-          # Decodes FLAC to WAV, writing to STDOUT
-          "flac -dcs -- \"#{source}\""
+      @command_list ||= begin
+          # If we're just resampling a FLAC to another FLAC, just use SoX to do
+          # that, and skip the rest of the transcode process
+          if format == "FLAC" && resampling_required?
+            ["sox \"#{source}\" -qG -b 16 \"#{destination}\" rate -v -L #{target_sample_rate} dither"]
+          else
+            flac_decoder = if rescaling_required? || resampling_required?
+                "sox \"#{source}\" -qG -b 16 -t wav - rate -v -L #{target_sample_rate} dither"
+              else
+                "flac -dcs -- \"#{source}\""
+              end
+
+            transcode_steps = [flac_decoder]
+
+            transcode_steps << case ENCODERS[encoding][:enc]
+            when "lame"
+              "lame --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
+            when "flac"
+              "flac -s #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
+            end
+
+            transcode_steps
+          end
         end
-
-      transcode_steps = [flac_decoder]
-
-      transcode_steps << case ENCODERS[encoding][:enc]
-      when "lame"
-        "lame --quiet #{ENCODERS[encoding][:opts]} - \"#{destination}\""
-      when "flac"
-        "flac -s #{ENCODERS[encoding][:opts]} -o \"#{destination}\" -"
-      end
-
-      transcode_steps
     end
 
     # @return [Boolean]
@@ -112,105 +138,49 @@ module RedactedBetter
       FlacInfo.new(file).streaminfo["channels"] > 2
     end
 
-    # @param torrent [Torrent]
-    # @param format [String] e.g. `FLAC`, `MP3`
-    # @param encoding [String] e.g. `320`, `V0 (VBR)`
-    # @param output_directory [String]
-    #
-    # @return [String] the generated torrent's output directory
-    def self.transcode(torrent, format, encoding, output_directory, spinner = nil)
-      # Determine the new torrent directory name
-      format_shorthand = Torrent.build_format(format, encoding)
-      torrent_name = Torrent.build_string(torrent.group.artist,
-                                          torrent.group.name, torrent.year,
-                                          torrent.media, format_shorthand)
-
-      # Get final output dir and make sure it doesn't already exist
-      torrent_dir = File.join(output_directory, torrent_name)
-
-      if Dir.exist?(torrent_dir)
-        spinner&.update(text: " - Failed")
-        spinner&.error(Pastel.new.red("(output directory exists)"))
-
-        return false
-      end
-
-      # Set up a temporary directory to work in
-      temp_dir = Dir.mktmpdir
-      temp_torrent_dir = File.join(temp_dir, torrent_name)
-      FileUtils.mkdir_p(temp_torrent_dir)
-
-      # Process each file
-      torrent.flac_files.each do |file_path|
-        spinner&.update(text: " - " + File.basename(file_path))
-        new_file_name = "#{File.basename(file_path, ".*")}.#{format.downcase}"
-        destination_file = File.join(temp_torrent_dir, new_file_name)
-
-        result = Transcode.new(format, encoding, file_path, destination_file).process
-
-        if !result[:exit_code].zero? || result[:errors].any?
-          errors = result[:errors] || []
-          errors.prepend("Exit code #{result[:exit_code]}") unless result[:exit_code].zero?
-
-          spinner&.error(Pastel.new.red("Transcode failed: #{errors.join(", ")}"))
-
-          return false
-        end
-      end
-
-      # Create final output directory and copy the finished transcode from the
-      # temp directory into it
-      FileUtils.cp_r(File.join(temp_torrent_dir), output_directory)
-
-      if OS.mac?
-        spinner&.update(text: " - Normalizing unicode file paths and names...")
-        `command -v convmv`
-
-        raise "Could not find `convmv` command, required on macOS." unless $?.success?
-
-        _stdout, _stderr, status = Open3.capture3("convmv -r -f UTF-8 -t UTF-8 --nfc --notest \"#{torrent_dir}\"")
-
-        unless status.success?
-          spinner&.error(Pastel.new.red("Failed to normalize torrent file names to NFC unicode."))
-        end
-      end
-
-      spinner&.update(text: "")
-
-      torrent_dir
-    ensure
-      FileUtils.remove_dir(temp_dir, true) if temp_dir
-      FileUtils.remove_dir(temp_torrent_dir, true) if temp_torrent_dir
-    end
-
     private
+
+    # Normalize the filename of a given file to Unicode NFC normalization
+    # format. This is typically only required on macOS which sometimes generates
+    # a different normalized Unicode string which is valid, but not typically
+    # interoperable with torrent clients running on Linux.
+    #
+    # @param file_path [String]
+    #
+    # @return [Array<String>] errors, if any
+    def normalize_unicode(file_path)
+      `command -v convmv`
+      return ["Could not find `convmv` command, required on macOS."] unless $?.success?
+
+      _stdout, _stderr, status = Open3.capture3(
+        "convmv -f UTF-8 -t UTF-8 --nfc --notest \"#{file_path}\"",
+      )
+
+      return ["Transcode pipeline exited with non-zero code: #{status.exitstatus}"] unless status.success?
+
+      []
+    end
 
     # @return [FlacInfo]
     def flac_info
       @flac_info ||= FlacInfo.new(source)
     end
 
-    # Determine if we need to resample the FLAC, this is so we ensure we only
-    # have 44.1kHz or 48kHz output
+    # Determine if the track needs to be resampled from a higher bit rate (like
+    # 96kHz or 88.2kHz) to a lower bit rate (like 48kHz or 44.1kHz) during the
+    # transcoding process.
     #
-    # @return [Array(boolean, integer, Array<String>)]
-    def check_sample_rate
-      errors = []
+    # @return [Boolean]
+    def resampling_required?
+      flac_info.streaminfo["samplerate"] != target_sample_rate
+    end
 
-      sample_rate = flac_info.streaminfo["samplerate"]
-      bit_depth = flac_info.streaminfo["bits_per_sample"]
-
-      if (resample_required = sample_rate > 48_000 || bit_depth > 16)
-        required_sample_rate = if (sample_rate % 44_100).zero?
-            44_100
-          elsif (sample_rate % 48_000).zero?
-            48_000
-          else
-            errors << "#{sample_rate}Hz sample rate unsupported"
-          end
-      end
-
-      [resample_required, required_sample_rate, errors]
+    # Determine if the track needs to be rescaled from 24-bit to 16-bit depth
+    # during the transcoding process.
+    #
+    # @return [Boolean]
+    def rescaling_required?
+      flac_info.streaminfo["bits_per_sample"] != 16
     end
   end
 end
