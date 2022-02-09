@@ -184,6 +184,7 @@ module RedactedBetter
     # @param torrent [Torrent] the torrent to transcode
     # @param format [String]
     # @param encoding [String]
+    # @param spinner [TTY::Spinner, nil]
     #
     # @return [String, nil] the path to the created torrent file, otherwise nil
     #   if a problem occurred

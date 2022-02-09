@@ -120,6 +120,11 @@ module RedactedBetter
       FlacInfo.new(file).streaminfo["channels"] > 2
     end
 
+    # @param torrent [Torrent]
+    # @param format [String] e.g. `FLAC`, `MP3`
+    # @param encoding [String] e.g. `320`, `V0 (VBR)`
+    # @param output_directory [String]
+    #
     # @return [String] the generated torrent's output directory
     def self.transcode(torrent, format, encoding, output_directory, spinner = nil)
       # Determine the new torrent directory name
@@ -195,6 +200,8 @@ module RedactedBetter
 
     # Determine if we need to resample the FLAC, this is so we ensure we only
     # have 44.1kHz or 48kHz output
+    #
+    # @return [Array(boolean, integer, Array<String>)]
     def check_sample_rate
       errors = []
 

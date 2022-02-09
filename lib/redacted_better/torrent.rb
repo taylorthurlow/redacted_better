@@ -281,6 +281,9 @@ module RedactedBetter
     # Builds a string which represents a given torrent's format and encoding
     # combination.
     #
+    # @param format [String] e.g. `FLAC`, `MP3`
+    # @param encoding [String] e.g. `320`, `V0 (VBR)`
+    #
     # @return [String] the string representing the format and encoding
     def self.build_format(format, encoding)
       case format
