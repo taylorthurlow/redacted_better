@@ -293,6 +293,7 @@ module RedactedBetter
         "sox" => `sox --version`.strip.gsub(/^sox:\s+/, ""),
         "mktorrent" => `mktorrent -h`.split("\n").first.strip,
         "lame" => `lame --version`.split("\n").first,
+        "mediainfo" => `mediainfo --version`.gsub("\n", " ").strip,
         "convmv" => convmv || "not installed",
       }
     end
