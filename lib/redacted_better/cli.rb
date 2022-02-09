@@ -60,9 +60,9 @@ module RedactedBetter
       end
 
       if torrent.mislabeled_24bit?
-        Log.error "Determined that the torrent is mislabeled 24-bit, not implemented."
+        Log.warning "The source torrent is labeled as 16-bit FLAC but it is actually 24-bit FLAC. This torrent should be reported and fixed."
 
-        return false
+        # return false
         # fixed = handle_mislableled_torrent(torrent)
         # formats_missing << ["FLAC", "Lossless"] if fixed
       end
