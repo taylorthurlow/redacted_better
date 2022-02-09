@@ -231,7 +231,7 @@ module RedactedBetter
             end
           end
 
-          release_description = sanitize_personal_paths(release_description)
+          release_description = sanitize_personal_paths(release_description).chomp
 
           sp.update(text: " - Uploading to RED...")
           if @api.upload_transcode(
