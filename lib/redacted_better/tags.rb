@@ -16,6 +16,19 @@ module RedactedBetter
       end
     end
 
+    # Determines whether or not the tags of the provided media file are valid or
+    # not. Accepts both FLAC and MP3 files.
+    def self.tag_errors(file_path)
+      case File.extname(file_path).downcase
+      when ".flac"
+        flac_tag_errors(file_path)
+      when ".mp3"
+        mp3_tag_errors(file_path)
+      else
+        raise "Unable to check for valid tags on file with an unknown extension."
+      end
+    end
+
     # Copies all relevant file tags from an input FLAC file to a destination FLAC
     # or MP3 file, given the absolute file paths to each.
     #

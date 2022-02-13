@@ -1,5 +1,7 @@
 require "digest"
+require "mediainfo"
 require "slop"
+require "uri"
 
 module RedactedBetter
   class Cli
@@ -23,16 +25,215 @@ module RedactedBetter
 
     # @return [void]
     def start
-      @opts.args.each do |arg|
-        url_data = parse_torrent_url(arg)
-        torrent = @api.torrent(url_data[:torrent_id], @download_directory)
-        torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
+      if (new_torrent_path = @opts[:new])
+        handle_new_torrent(new_torrent_path)
+      else
+        @opts.args.each do |arg|
+          url_data = parse_torrent_url(arg)
+          torrent = @api.torrent(url_data[:torrent_id], @download_directory)
+          torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
 
-        handle_found_release(torrent_group, torrent)
+          handle_found_release(torrent_group, torrent)
+        end
       end
     end
 
     private
+
+    # @param path [String] the path to a directory or file to create a new
+    #   torrent from
+    #
+    # @return [Boolean] successful?
+    def handle_new_torrent(path)
+      unless File.exist?(path)
+        Log.error("Unable to find file or directory at provided path.")
+        return false
+      end
+
+      working_directory = Dir.mktmpdir
+
+      input_is_directory = File.directory?(path)
+
+      if input_is_directory
+        Dir.chdir path
+        files = Dir.glob("**/*")
+
+        spinners = TTY::Spinner::Multi.new("[:spinner] Processing files:")
+
+        all_files_ok = false
+
+        # @type [AudioFile]
+        first_audio_file = nil
+
+        files.each do |file|
+          spinners.register("[:spinner] #{file}:text") do |spinner|
+            spinner&.update(text: " - Parsing with mediainfo...")
+            mediainfo = MediaInfo.from(file)
+
+            if mediainfo.audio?
+              audio_file = AudioFile.new(file, mediainfo)
+              first_audio_file ||= audio_file
+
+              spinner&.update(text: " - Checking for problems preventing upload...")
+              if (problems = audio_file.problems_preventing_upload).any?
+                spinner&.error(Pastel.new.red(problems.join(", ")))
+              else
+                all_files_ok = true
+
+                spinner&.success(Pastel.new.green("all ok!"))
+              end
+            else
+              # Handle non-audio file
+              spinner&.success(Pastel.new.green("all ok!"))
+            end
+          rescue StandardError => e
+            spinner&.error(Pastel.new.red(e.message))
+          end
+        end
+
+        spinners.auto_spin
+
+        return unless all_files_ok
+
+        if first_audio_file.nil?
+          spinner&.error(Pastel.new.red("No audio files found."))
+          return
+        end
+
+        metadata = {}
+        prompt = TTY::Prompt.new
+
+        metadata[:artist] = prompt.ask("Artist:") do |q|
+          q.required true
+          q.default first_audio_file.artist
+        end
+
+        metadata[:release_name] = prompt.ask("Release name:") do |q|
+          q.required true
+          q.default first_audio_file.album
+        end
+
+        metadata[:release_type] = prompt.select(
+          "Release type:",
+          %w[
+            Album
+            Soundtrack
+            EP
+            Anthology
+            Compilation
+            Single
+            Live\ album
+            Remix
+            Bootleg
+            Interview
+            Mixtape
+            Demo
+            Concert Recording
+            DJ\ Mix
+            Unknown
+          ]
+        )
+
+        metadata[:initial_year] = prompt.ask("Initial year:") do |q|
+          q.required true
+          q.default first_audio_file.date if first_audio_file.date&.match?(/^\d{4}$/)
+        end
+
+        metadata[:edition_year] = prompt.ask("Edition year:") do |q|
+          q.required true
+          q.default metadata[:initial_year]
+        end
+
+        metadata[:edition_title] = prompt.ask("Edition title:")
+
+        metadata[:record_label] = prompt.ask("Record label:")
+        metadata[:catalogue_number] = prompt.ask("Catalogue number:")
+
+        metadata[:scene] = prompt.no?("Scene release?") do |q|
+          q.required true
+        end
+
+        prompt.warn("Be sure you understand the rules regarding uploading a Scene release!") if metadata[:scene]
+
+        metadata[:format] = prompt.select("Format:", %w[MP3 FLAC AAC AC3 DTS]) do |q|
+          q.default first_audio_file.format
+        end
+
+        metadata[:bitrate] = prompt.select(
+          "Bitrate:",
+          [
+            "Lossless",
+            "24bit Lossless",
+            "320",
+            "256",
+            "192",
+            "V0 (VBR)",
+            "V1 (VBR)",
+            "V2 (VBR)",
+            "APS (VBR)",
+            "APX (VBR)",
+          ],
+          filter: true,
+        ) do |q|
+          q.default "Lossless" if first_audio_file.format == "FLAC"
+        end
+
+        metadata[:media] = prompt.select(
+          "Media:",
+          [
+            "CD",
+            "WEB",
+            "Vinyl",
+            "Soundboard",
+            "DVD",
+            "Blu-Ray",
+            "Cassette",
+            "SACD",
+            "DAT",
+          ],
+          filter: true,
+        )
+
+        metadata[:tags] = prompt.ask("Tags (comma-separated)") do |q|
+          q.modify :down, :remove
+          q.validate ->(input) { input.nil? || input.empty? || input =~ /\A[A-Za-z0-9.,]+\Z/ }
+          q.messages[:valid?] = "Invalid tags, must contain only a-z, 0-9, and periods"
+          q.convert :array
+        end
+
+        metadata[:image_url_or_path] = prompt.ask("Image:") do |q|
+          q.validate ->(input) do
+                       uri_regexp = /^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
+
+                       input.nil? || input.empty? || input =~ uri_regexp || File.exist?(input)
+                     end
+        end
+
+        puts metadata
+
+        torrent_file_name = Torrent.build_string(
+          metadata.fetch(:artist),
+          metadata.fetch(:release_name),
+          metadata[:edition_year] || metadata.fetch(:initial_year),
+          metadata.fetch(:media),
+          Torrent.build_format(
+            metadata.fetch(:format),
+            metadata.fetch(:bitrate),
+          ),
+        )
+
+        puts torrent_file_name
+
+        # torrent_file = torrent.make_torrent(
+        #   torrent_dir,
+        #   format,
+        #   encoding,
+        #   @user["passkey"],
+        # )
+      else
+        # single file input
+      end
+    end
 
     # @param group [Group]
     # @param torrent [Torrent]
@@ -354,6 +555,7 @@ module RedactedBetter
         o.string "-c", "--config", "path to an alternate config file"
         o.bool "-q", "--quiet", "only print to STDOUT when errors occur"
         o.string "-k", "--api-key", "your redacted API key"
+        o.string "-n", "--new", "a file/directory from which to create a new torrent"
         o.bool "--skip-upload", "skip uploading to RED"
         o.bool "-h", "--help", "print help"
         o.on "-v", "--version", "print the version" do
