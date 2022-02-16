@@ -226,8 +226,6 @@ module RedactedBetter
           q.required true
         end
 
-        puts metadata
-
         spinner = TTY::Spinner.new("[:spinner] Generating torrent file...")
         spinner.auto_spin
 
