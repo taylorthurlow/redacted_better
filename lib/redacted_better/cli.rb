@@ -244,7 +244,7 @@ module RedactedBetter
         tracker_url = "https://flacsfor.me/#{@user.fetch("passkey")}/announce"
 
         _stdout, _stderr, status = Open3.capture3(
-          "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{@output_directory}\"",
+          "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{path}\"",
         )
 
         unless status.success?
