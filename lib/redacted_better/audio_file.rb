@@ -21,6 +21,21 @@ module RedactedBetter
 
       errors += Tags.tag_errors(path)
 
+      if format == "FLAC"
+        _stdout, stderr, status = Open3.capture3("flac -wt \"#{path}\"")
+
+        unless status.success?
+          error_line = stderr.split("\n")
+                             .find { |line| line.include?(File.basename(path)) }
+
+          errors << if error_line
+            "failed flac verification test: #{error_line}"
+          else
+            "failed flac verification test"
+          end
+        end
+      end
+
       if (bit_depth && ![16, 24].include?(bit_depth))
         errors << "#{bit_depth} is an invalid bit depth"
       elsif !bit_depth && format == "FLAC"
