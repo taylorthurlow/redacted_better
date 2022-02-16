@@ -285,6 +285,7 @@ module RedactedBetter
         response = @api.post(action: "upload", body: post_body)
 
         if response.success?
+          FileUtils.cp(output_torrent_file_path, @torrents_directory)
           new_url = "https://redacted.ch/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
           spinner.success(Pastel.new.green("done: #{new_url}"))
         else
