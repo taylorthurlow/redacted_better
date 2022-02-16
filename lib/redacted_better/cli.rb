@@ -116,7 +116,7 @@ module RedactedBetter
         metadata[:release_type] = prompt.select(
           "Release type:",
           [
-            { name: "Album", value: 0 },
+            { name: "Album", value: 1 },
             { name: "Soundtrack", value: 3 },
             { name: "EP", value: 5 },
             { name: "Anthology", value: 6 },
