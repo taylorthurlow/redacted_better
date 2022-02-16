@@ -115,22 +115,22 @@ module RedactedBetter
 
         metadata[:release_type] = prompt.select(
           "Release type:",
-          %w[
-            Album
-            Soundtrack
-            EP
-            Anthology
-            Compilation
-            Single
-            Live\ album
-            Remix
-            Bootleg
-            Interview
-            Mixtape
-            Demo
-            Concert Recording
-            DJ\ Mix
-            Unknown
+          [
+            { name: "Album", value: 0 },
+            { name: "Soundtrack", value: 3 },
+            { name: "EP", value: 5 },
+            { name: "Anthology", value: 6 },
+            { name: "Compilation", value: 7 },
+            { name: "Single", value: 9 },
+            { name: "Live album", value: 11 },
+            { name: "Remix", value: 13 },
+            { name: "Bootleg", value: 14 },
+            { name: "Interview", value: 15 },
+            { name: "Mixtape", value: 16 },
+            { name: "Demo", value: 17 },
+            { name: "Concert recording", value: 18 },
+            { name: "DJ mix", value: 19 },
+            { name: "Unknown", value: 21 },
           ]
         )
 
@@ -149,11 +149,15 @@ module RedactedBetter
         metadata[:record_label] = prompt.ask("Record label:")
         metadata[:catalogue_number] = prompt.ask("Catalogue number:")
 
-        metadata[:scene] = prompt.no?("Scene release?") do |q|
-          q.required true
+        metadata[:scene] = prompt.yes?("Scene release?") do |q|
+          q.default false
         end
 
         prompt.warn("Be sure you understand the rules regarding uploading a Scene release!") if metadata[:scene]
+
+        metadata[:vanity_house] = prompt.yes?("Vanity house release?") do |q|
+          q.default false
+        end
 
         metadata[:format] = prompt.select("Format:", %w[MP3 FLAC AAC AC3 DTS]) do |q|
           q.default first_audio_file.format
@@ -194,6 +198,13 @@ module RedactedBetter
           filter: true,
         )
 
+        if metadata[:media] == "CD"
+          metadata[:log_files] = prompt.multi_select(
+            "Select CD LOG files, if any:",
+            files,
+          )
+        end
+
         metadata[:tags] = prompt.ask("Tags (comma-separated)") do |q|
           q.modify :down, :remove
           q.validate ->(input) { input.nil? || input.empty? || input =~ /\A[A-Za-z0-9.,]+\Z/ }
@@ -209,7 +220,14 @@ module RedactedBetter
                      end
         end
 
+        metadata[:release_description] = prompt.multiline("Release description:") do |q|
+          q.required true
+        end
+
         puts metadata
+
+        spinner = TTY::Spinner.new("[:spinner] Generating torrent file...")
+        spinner.auto_spin
 
         torrent_file_name = Torrent.build_string(
           metadata.fetch(:artist),
@@ -222,14 +240,58 @@ module RedactedBetter
           ),
         )
 
-        puts torrent_file_name
+        output_torrent_file_path = File.join(Dir.mktmpdir, "#{torrent_file_name}.torrent")
+        tracker_url = "https://flacsfor.me/#{@user.fetch("passkey")}/announce"
 
-        # torrent_file = torrent.make_torrent(
-        #   torrent_dir,
-        #   format,
-        #   encoding,
-        #   @user["passkey"],
-        # )
+        _stdout, _stderr, status = Open3.capture3(
+          "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{@output_directory}\"",
+        )
+
+        unless status.success?
+          spinner.error(Pastel.new.red("Failed to create torrent file, exit status: #{status.exitstatus}"))
+          exit
+        end
+
+        spinner.success(Pastel.new.green("done: #{torrent_file_name}.torrent"))
+
+        spinner = TTY::Spinner.new("[:spinner] Uploading to RED...")
+        spinner.auto_spin
+
+        post_body = {
+          file_input: Faraday::FilePart.new(File.open(output_torrent_file_path), "application/x-bittorrent"),
+          type: 0, # music
+          artists: [metadata.fetch(:artist)],
+          importance: [1],
+          title: metadata.fetch(:release_name),
+          year: metadata.fetch(:initial_year),
+          releasetype: metadata.fetch(:release_type),
+          media: metadata.fetch(:media),
+          # unknown: false,
+          remaster_year: metadata[:edition_year],
+          remaster_title: metadata[:edition_title],
+          remaster_record_label: metadata[:record_label],
+          remaster_catalogue_number: metadata[:catalogue_number],
+          format: metadata.fetch(:format),
+          bitrate: metadata.fetch(:bitrate),
+          tags: metadata.fetch(:tags),
+          vbr: metadata.fetch(:bitrate).downcase.include?("vbr"),
+          logfiles: metadata[:log_files] || [],
+          vanity_house: metadata.fetch(:vanity_house),
+          # groupid: source_torrent.group.id,
+          release_desc: metadata.fetch(:release_description).join("\n"),
+        }
+
+        response = @api.post(action: "upload", body: post_body)
+
+        if response.success?
+          new_url = "https://redacted.ch/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
+          spinner.success(Pastel.new.green("done: #{new_url}"))
+        else
+          message = "Failed to upload, response code: #{response.code}"
+          spinner.error(Pastel.new.red(message))
+          warn Pastel.new.red(response.data)
+          exit
+        end
       else
         # single file input
       end
