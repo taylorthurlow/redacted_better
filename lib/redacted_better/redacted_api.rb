@@ -142,12 +142,12 @@ module RedactedBetter
 
       File.open("temp.json", "w") { |f| f.write(body_data.to_json) }
 
-      # response = post(
-      #   action: "upload",
-      #   body: body_data,
-      # )
+      response = post(
+        action: "upload",
+        body: body_data,
+      )
 
-      # response.success?
+      response.success?
     end
 
     private
