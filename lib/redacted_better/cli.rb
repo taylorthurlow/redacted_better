@@ -218,6 +218,10 @@ module RedactedBetter
                      end
         end
 
+        metadata[:album_description] = prompt.multiline("Album description:") do |q|
+          q.required true
+        end
+
         metadata[:release_description] = prompt.multiline("Release description:") do |q|
           q.required true
         end
@@ -277,6 +281,7 @@ module RedactedBetter
           vanity_house: metadata.fetch(:vanity_house),
           # groupid: source_torrent.group.id,
           release_desc: metadata.fetch(:release_description).join("\n"),
+          album_desc: metadata.fetch(:album_description).join("\n"),
         }
 
         response = @api.post(action: "upload", body: post_body)
