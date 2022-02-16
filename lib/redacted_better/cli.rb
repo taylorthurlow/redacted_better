@@ -60,7 +60,7 @@ module RedactedBetter
 
         spinners = TTY::Spinner::Multi.new("[:spinner] Processing files:")
 
-        all_files_ok = false
+        all_files_ok = true
 
         # @type [AudioFile]
         first_audio_file = nil
@@ -78,7 +78,7 @@ module RedactedBetter
               if (problems = audio_file.problems_preventing_upload).any?
                 spinner&.error(Pastel.new.red(problems.join(", ")))
               else
-                all_files_ok = true
+                all_files_ok = false
 
                 spinner&.success(Pastel.new.green("all ok!"))
               end
