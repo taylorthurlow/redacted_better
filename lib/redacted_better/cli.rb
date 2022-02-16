@@ -101,6 +101,8 @@ module RedactedBetter
         metadata = {}
         prompt = TTY::Prompt.new
 
+        metadata[:group_id] = prompt.ask("Group ID, if it exists:")
+
         metadata[:artist] = prompt.ask("Artist:") do |q|
           q.required true
           q.default first_audio_file.artist
@@ -203,23 +205,25 @@ module RedactedBetter
           )
         end
 
-        metadata[:tags] = prompt.ask("Tags (comma-separated)") do |q|
-          q.modify :down, :remove
-          q.validate ->(input) { input.nil? || input.empty? || input =~ /\A[A-Za-z0-9.,]+\Z/ }
-          q.messages[:valid?] = "Invalid tags, must contain only a-z, 0-9, and periods"
-          q.convert :array
-        end
+        unless metadata[:group_id]
+          metadata[:tags] = prompt.ask("Tags (comma-separated)") do |q|
+            q.modify :down, :remove
+            q.validate ->(input) { input.nil? || input.empty? || input =~ /\A[A-Za-z0-9.,]+\Z/ }
+            q.messages[:valid?] = "Invalid tags, must contain only a-z, 0-9, and periods"
+            q.convert :array
+          end
 
-        metadata[:image_url_or_path] = prompt.ask("Image:") do |q|
-          q.validate ->(input) do
-                       uri_regexp = /^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
+          metadata[:image_url_or_path] = prompt.ask("Image:") do |q|
+            q.validate ->(input) do
+                         uri_regexp = /^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
 
-                       input.nil? || input.empty? || input =~ uri_regexp || File.exist?(input)
-                     end
-        end
+                         input.nil? || input.empty? || input =~ uri_regexp || File.exist?(input)
+                       end
+          end
 
-        metadata[:album_description] = prompt.multiline("Album description:") do |q|
-          q.required true
+          metadata[:album_description] = prompt.multiline("Album description:") do |q|
+            q.required true
+          end
         end
 
         metadata[:release_description] = prompt.multiline("Release description:") do |q|
@@ -266,21 +270,25 @@ module RedactedBetter
           year: metadata.fetch(:initial_year),
           releasetype: metadata.fetch(:release_type),
           media: metadata.fetch(:media),
-          # unknown: false,
           remaster_year: metadata[:edition_year],
           remaster_title: metadata[:edition_title],
           remaster_record_label: metadata[:record_label],
           remaster_catalogue_number: metadata[:catalogue_number],
           format: metadata.fetch(:format),
           bitrate: metadata.fetch(:bitrate),
-          tags: metadata.fetch(:tags).join(","),
           vbr: metadata.fetch(:bitrate).downcase.include?("vbr"),
           logfiles: metadata[:log_files] || [],
           vanity_house: metadata.fetch(:vanity_house),
-          # groupid: source_torrent.group.id,
           release_desc: metadata.fetch(:release_description).join("\n"),
-          album_desc: metadata.fetch(:album_description).join("\n"),
         }
+
+        if metadata[:group_id]
+          post_body[:groupid] = metadata.fetch(:group_id)
+        else
+          post_body[:album_desc] = metadata.fetch(:album_description).join("\n")
+          post_body[:tags] = metadata.fetch(:tags).join(",")
+          post_body[:image] = metadata.fetch(:image)
+        end
 
         response = @api.post(action: "upload", body: post_body)
 
