@@ -77,9 +77,9 @@ module RedactedBetter
               spinner&.update(text: " - Checking for problems preventing upload...")
               if (problems = audio_file.problems_preventing_upload).any?
                 spinner&.error(Pastel.new.red(problems.join(", ")))
-              else
-                all_files_ok = false
 
+                all_files_ok = false
+              else
                 spinner&.success(Pastel.new.green("all ok!"))
               end
             else
