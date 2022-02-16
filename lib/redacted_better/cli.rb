@@ -271,7 +271,7 @@ module RedactedBetter
           remaster_catalogue_number: metadata[:catalogue_number],
           format: metadata.fetch(:format),
           bitrate: metadata.fetch(:bitrate),
-          tags: metadata.fetch(:tags),
+          tags: metadata.fetch(:tags).join(","),
           vbr: metadata.fetch(:bitrate).downcase.include?("vbr"),
           logfiles: metadata[:log_files] || [],
           vanity_house: metadata.fetch(:vanity_house),
