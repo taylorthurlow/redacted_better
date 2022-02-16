@@ -50,8 +50,6 @@ module RedactedBetter
         return false
       end
 
-      working_directory = Dir.mktmpdir
-
       input_is_directory = File.directory?(path)
 
       if input_is_directory
