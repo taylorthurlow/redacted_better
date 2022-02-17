@@ -230,6 +230,9 @@ module RedactedBetter
           q.required true
         end
 
+        puts JSON.pretty_generate(metadata)
+        exit unless prompt.yes?("Does this metadata look OK?")
+
         spinner = TTY::Spinner.new("[:spinner] Generating torrent file...")
         spinner.auto_spin
 
