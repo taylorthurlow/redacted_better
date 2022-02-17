@@ -287,7 +287,7 @@ module RedactedBetter
         else
           post_body[:album_desc] = metadata.fetch(:album_description).join("\n")
           post_body[:tags] = metadata.fetch(:tags).join(",")
-          post_body[:image] = metadata.fetch(:image)
+          post_body[:image] = metadata.fetch(:image_url_or_path)
         end
 
         response = @api.post(action: "upload", body: post_body)
