@@ -201,7 +201,7 @@ module RedactedBetter
         if metadata[:media] == "CD"
           metadata[:log_files] = prompt.multi_select(
             "Select CD LOG files, if any:",
-            files,
+            files.sort,
           )
         end
 
