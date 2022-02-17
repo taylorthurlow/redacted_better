@@ -296,6 +296,14 @@ module RedactedBetter
           FileUtils.cp(output_torrent_file_path, @torrents_directory)
           new_url = "https://redacted.ch/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
           spinner.success(Pastel.new.green("done: #{new_url}"))
+
+          if metadata[:format] == "FLAC" && prompt.yes?("Upload transcodes as well?")
+            url_data = parse_torrent_url(new_url)
+            torrent = @api.torrent(url_data[:torrent_id], @download_directory)
+            torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
+
+            handle_found_release(torrent_group, torrent)
+          end
         else
           message = "Failed to upload, response code: #{response.code}"
           spinner.error(Pastel.new.red(message))
