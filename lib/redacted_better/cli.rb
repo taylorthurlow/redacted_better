@@ -277,7 +277,8 @@ module RedactedBetter
           format: metadata.fetch(:format),
           bitrate: metadata.fetch(:bitrate),
           vbr: metadata.fetch(:bitrate).downcase.include?("vbr"),
-          logfiles: metadata[:log_files] || [],
+          logfiles: metadata.fetch(:log_files, [])
+                            .map { |lf| Faraday::FilePart.new(File.open(lf), "text/plain") },
           vanity_house: metadata.fetch(:vanity_house),
           release_desc: metadata.fetch(:release_description).join("\n"),
         }
