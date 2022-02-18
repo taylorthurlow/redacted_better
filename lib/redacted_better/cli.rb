@@ -283,13 +283,13 @@ module RedactedBetter
           logfiles: metadata.fetch(:log_files, [])
                             .map { |lf| Faraday::FilePart.new(File.open(lf), "text/plain") },
           vanity_house: metadata.fetch(:vanity_house),
-          release_desc: metadata.fetch(:release_description).join("\n"),
+          release_desc: metadata.fetch(:release_description).join(""),
         }
 
         if metadata[:group_id]
           post_body[:groupid] = metadata.fetch(:group_id)
         else
-          post_body[:album_desc] = metadata.fetch(:album_description).join("\n")
+          post_body[:album_desc] = metadata.fetch(:album_description).join("")
           post_body[:tags] = metadata.fetch(:tags).join(",")
           post_body[:image] = metadata.fetch(:image_url_or_path)
         end
