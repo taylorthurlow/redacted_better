@@ -17,6 +17,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= 2.6"
 
   s.add_dependency "faraday", "~> 1.0.1"      # HTTP client
+  s.add_dependency "faraday_middleware"
   s.add_dependency "flacinfo-rb", "~> 1.0"    # Inspect FLAC metadata/info
   s.add_dependency "htmlentities", "~> 4.3"   # Encode/decode HTML entities
   s.add_dependency "mechanize", "~> 2.7"      # Automated web interaction

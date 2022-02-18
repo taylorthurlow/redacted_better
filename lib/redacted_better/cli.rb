@@ -221,9 +221,19 @@ module RedactedBetter
                        end
           end
 
-          metadata[:album_description] = prompt.multiline("Album description:") do |q|
-            q.required true
-          end
+          metadata[:album_description] = if prompt.yes?("Generate album description from YADG?")
+              api_key = @config.fetch(:yadg_api_key)
+              raise "No configured YADG api key" unless api_key
+
+              url = prompt.ask("Metadata URL:") do |q|
+                q.required true
+              end
+
+              Yadg.new(api_key).description(url)
+            else
+              prompt.multiline("Album description:") { |q| q.required true }
+                    .join("")
+            end
         end
 
         metadata[:release_description] = prompt.multiline("Release description:") do |q|
@@ -289,7 +299,7 @@ module RedactedBetter
         if metadata[:group_id]
           post_body[:groupid] = metadata.fetch(:group_id)
         else
-          post_body[:album_desc] = metadata.fetch(:album_description).join("")
+          post_body[:album_desc] = metadata.fetch(:album_description)
           post_body[:tags] = metadata.fetch(:tags).join(",")
           post_body[:image] = metadata.fetch(:image_url_or_path)
         end

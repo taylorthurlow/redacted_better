@@ -25,4 +25,9 @@ module RedactedBetter
   def self.user_agent
     "redacted_better/#{VERSION} (taylorthurlow/redacted_better@github)"
   end
+
+  # @return [String]
+  def self.root
+    File.expand_path(File.dirname(__FILE__))
+  end
 end

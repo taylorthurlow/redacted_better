@@ -1,5 +1,6 @@
 api_key:
 ptpimg_api_key:
+yadg_api_key:
 
 # Many FLAC torrents on Redacted marked as 16-bit are actually 24-bit, mostly
 # coming from Bandcamp, which does not make a distinction on their download
