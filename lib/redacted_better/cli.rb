@@ -326,8 +326,6 @@ module RedactedBetter
             sanitize_personal_paths(release_description).chomp
           end
 
-        File.open("out.txt", "w+") { |f| f.write(metadata[:release_description]) }
-
         puts JSON.pretty_generate(metadata)
         exit unless prompt.yes?("Does this metadata look OK?")
 
