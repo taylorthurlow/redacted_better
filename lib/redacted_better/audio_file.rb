@@ -1,4 +1,4 @@
-require "digest"
+require "openssl"
 require "mediainfo"
 
 module RedactedBetter
@@ -74,7 +74,7 @@ module RedactedBetter
       name = File.basename(@path)
 
       file = File.open(@path)
-      md5 = Digest::MD5.file(file)
+      md5 = OpenSSL::Digest::MD5.file(file)
       out_path = File.join(Dir.tmpdir, "#{md5}-spectrogram.png")
 
       if File.exist?(out_path)

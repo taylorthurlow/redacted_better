@@ -1,5 +1,5 @@
-require "digest"
 require "mediainfo"
+require "openssl"
 require "slop"
 require "uri"
 
@@ -715,7 +715,7 @@ module RedactedBetter
       # we send the same image to ptpimg, which is smart enough to give us back
       # the same URL and not waste storage.
       file = File.open(file_path)
-      md5 = Digest::MD5.file(file)
+      md5 = OpenSSL::Digest::MD5.file(file)
       out_path = File.join(Dir.tmpdir, "#{md5}-spectrogram.png")
 
       if File.exist?(out_path)
