@@ -62,6 +62,7 @@ module RedactedBetter
 
         # @type [AudioFile]
         first_audio_file = nil
+        audio_files = []
 
         files.each do |file|
           spinners.register("[:spinner] #{file}:text") do |spinner|
@@ -70,6 +71,7 @@ module RedactedBetter
 
             if mediainfo.audio?
               audio_file = AudioFile.new(file, mediainfo)
+              audio_files << audio_file
               first_audio_file ||= audio_file
 
               spinner&.update(text: " - Checking for problems preventing upload...")
@@ -228,10 +230,6 @@ module RedactedBetter
             end
         end
 
-        metadata[:release_description] = prompt.multiline("Release description:") do |q|
-          q.required true
-        end
-
         metadata[:image_url] = begin
             if prompt.yes?("Upload image from file within torrent?")
               local_image_path = prompt.select("Select image file", files.sort, filter: true)
@@ -256,6 +254,79 @@ module RedactedBetter
               nil
             end
           end
+
+        metadata[:release_description] = begin
+            release_description = ""
+
+            if (pre_description = prompt.multiline("Release description:"))
+              release_description << pre_description.join
+            end
+
+            release_description << <<~DESCRIPTION
+
+              This torrent was compiled by redacted_better v#{RedactedBetter::VERSION}, a script which helps automate uploads. This upload was not completed without the uploader's confirmation, and was not done unattended.
+
+              [quote][pre]#{libraries_breakdown.to_yaml.split("\n")[1..].join("\n")}[/pre][/quote]
+
+            DESCRIPTION
+
+            include_mediainfo = prompt.yes?("Include per-track mediainfo output?")
+            include_spectrals = prompt.yes?("Include per-track spectrograms?")
+
+            if include_mediainfo || include_spectrals
+              audio_files.each_with_index do |audio_file, i|
+                # SPOILER START
+                release_description << <<~DESCRIPTION
+                  [hide="#{File.basename(audio_file.path)}"]
+                DESCRIPTION
+
+                # MEDIAINFO
+                release_description << <<~DESCRIPTION if include_mediainfo
+                  [quote][pre]#{`mediainfo "#{audio_file.path}"`.chomp}[/pre][/quote]
+                DESCRIPTION
+
+                # SPECTRAL
+                release_description << "[img]{{spectral-#{i + 1}}}[/img]" if include_spectrals
+
+                # SPOILER END
+                release_description << <<~DESCRIPTION
+                  [/hide]
+                DESCRIPTION
+              end
+            end
+
+            if include_spectrals
+              spinners = TTY::Spinner::Multi.new("[:spinner] Generating spectrograms:")
+
+              spectral_paths = []
+              audio_files.each_with_index do |audio_file, i|
+                spinners.register("[:spinner] #{File.basename audio_file.path}") do |sp|
+                  if (spectrogram = audio_file.spectrogram)
+                    spectral_paths << spectrogram
+                    release_description.gsub!("{{spectral-#{i + 1}}}", "{{spectral-#{spectrogram}}}")
+                    sp.success(Pastel.new.green("done."))
+                  else
+                    spectral_paths << nil
+                    sp.error(Pastel.new.red("failed."))
+                  end
+                end
+              end
+              spinners.auto_spin
+
+              spinner = TTY::Spinner.new("[:spinner] Uploading to ptpimg...")
+              spinner.auto_spin
+              Ptpimg.new(@config.fetch(:ptpimg_api_key))
+                    .upload(spectral_paths)
+                    .each do |spectral_file_path, spectral_url|
+                release_description.gsub!("{{spectral-#{spectral_file_path}}}", spectral_url)
+              end
+              spinner.success("done.")
+            end
+
+            sanitize_personal_paths(release_description).chomp
+          end
+
+        File.open("out.txt", "w+") { |f| f.write(metadata[:release_description]) }
 
         puts JSON.pretty_generate(metadata)
         exit unless prompt.yes?("Does this metadata look OK?")

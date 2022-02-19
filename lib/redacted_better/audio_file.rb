@@ -1,3 +1,4 @@
+require "digest"
 require "mediainfo"
 
 module RedactedBetter
@@ -65,6 +66,26 @@ module RedactedBetter
       end
 
       errors
+    end
+
+    # @return [String, nil] the full local file path to the spectrogram PNG, or
+    #   nil if the process failed
+    def spectrogram
+      name = File.basename(@path)
+
+      file = File.open(@path)
+      md5 = Digest::MD5.file(file)
+      out_path = File.join(Dir.tmpdir, "#{md5}-spectrogram.png")
+
+      if File.exist?(out_path)
+        out_path
+      else
+        `sox "#{@path}" -n remix 1 spectrogram -x 1500 -y 500 -z 120 -w Kaiser -t "#{name}" -o "#{out_path}"`
+
+        out_path if $?.success?
+      end
+    ensure
+      file&.close
     end
 
     # Rules about uploads:
