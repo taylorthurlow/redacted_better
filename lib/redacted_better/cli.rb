@@ -252,7 +252,7 @@ module RedactedBetter
                 nil
               end
             else
-              warn Pastel.yellow.new("Continuing without an image.")
+              warn Pastel.new.yellow("Continuing without an image.")
               nil
             end
           end
