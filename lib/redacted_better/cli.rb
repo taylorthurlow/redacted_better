@@ -54,7 +54,7 @@ module RedactedBetter
 
       if input_is_directory
         Dir.chdir path
-        files = Dir.glob("**/*")
+        files = Dir.glob("**/*").sort
 
         spinners = TTY::Spinner::Multi.new("[:spinner] Processing files:")
 
