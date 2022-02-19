@@ -91,6 +91,8 @@ module RedactedBetter
           end
         end
 
+        audio_files.sort_by!(&:path)
+
         spinners.auto_spin
 
         return unless all_files_ok
@@ -622,6 +624,7 @@ module RedactedBetter
           )
             sp.success("successfully uploaded!")
           else
+            # TODO: Refactor to extract errors from this
             sp.error("failed.")
           end
         end
