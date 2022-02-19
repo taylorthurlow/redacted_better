@@ -31,7 +31,7 @@ module RedactedBetter
         errors << "path contains a file or directory name with leading whitespace: #{whitespace_led_component}"
       end
 
-      if (forbidden_substrings = FORBIDDEN_SUBSTRINGS.select { |fss| path.include?(fss) })
+      if (forbidden_substrings = FORBIDDEN_SUBSTRINGS.select { |fss| path.include?(fss) }).any?
         errors << "path contains invalid character(s): #{forbidden_substrings.join(" ")}"
       end
 
