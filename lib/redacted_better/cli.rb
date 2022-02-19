@@ -381,7 +381,7 @@ module RedactedBetter
           logfiles: metadata.fetch(:log_files, [])
                             .map { |lf| Faraday::FilePart.new(File.open(lf), "text/plain") },
           vanity_house: metadata.fetch(:vanity_house),
-          release_desc: metadata.fetch(:release_description).join(""),
+          release_desc: metadata.fetch(:release_description),
         }
 
         if metadata[:group_id]
