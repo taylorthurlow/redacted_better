@@ -1,5 +1,6 @@
-require "openssl"
 require "mediainfo"
+require "openssl"
+require "pathname"
 
 module RedactedBetter
   class AudioFile
@@ -7,84 +8,48 @@ module RedactedBetter
     #   characters) that are forbidden in file paths.
     FORBIDDEN_SUBSTRINGS = %w[? : < > \\ * | " //].freeze
 
-    # @return [String] full file path to audio file
+    # @return [Array<String>] valid mimetypes for audio files
+    ALLOWED_MIMETYPES = %w[
+      audio/mpeg
+      audio/flac
+    ].freeze
+
+    # @return [Pathname] full file path to audio file
     attr_reader :path
 
     # @return [MediaInfo::Tracks]
     attr_reader :mediainfo
 
-    # @param path [String] full path to audio file
+    # @return [Boolean]
+    attr_reader :checked_for_errors
+
+    # @param path [Pathname] full path to audio file
     # @param mediainfo [MediaInfo::Tracks, nil]
     def initialize(path, mediainfo = nil)
       @path = path
-      @mediainfo = mediainfo || MediaInfo.from(path)
+      @mediainfo = mediainfo || MediaInfo.from(path.to_s)
+      @checked_for_errors = false
+      @errors = []
     end
 
+    # @return [Boolean]
+    def checked_for_errors?
+      checked_for_errors
+    end
+
+    # Problems which would prevent processing or uploading.
+    #
     # @return [Array<String>]
-    def problems_preventing_upload
-      errors = []
+    def errors
+      raise "This audio file has not been checked for errors yet." unless checked_for_errors?
 
-      errors += Tags.tag_errors(path)
-
-      # Check for invalid filenames
-      if (whitespace_led_component = Pathname(path).each_filename.to_a.find { |p| p.start_with?(/\s+/) })
-        errors << "path contains a file or directory name with leading whitespace: #{whitespace_led_component}"
-      end
-
-      if (forbidden_substrings = FORBIDDEN_SUBSTRINGS.select { |fss| path.include?(fss) }).any?
-        errors << "path contains invalid character(s): #{forbidden_substrings.join(" ")}"
-      end
-
-      if format == "FLAC"
-        _stdout, stderr, status = Open3.capture3("flac -wt \"#{path}\"")
-
-        unless status.success?
-          error_line = stderr.split("\n")
-                             .find { |line| line.include?(File.basename(path)) }
-
-          errors << if error_line
-            "failed flac verification test: #{error_line}"
-          else
-            "failed flac verification test"
-          end
-        end
-      end
-
-      if (bit_depth && ![16, 24].include?(bit_depth))
-        errors << "#{bit_depth} is an invalid bit depth"
-      elsif !bit_depth && format == "FLAC"
-        errors << "unable to determine bit depth"
-      end
-
-      if sample_rate.nil?
-        errors << "unable to determine sample rate"
-      else
-        case bit_depth
-        when 16
-          unless [44_100, 48_000].include?(sample_rate)
-            sample_rate_khz = sample_rate.to_f / 100
-            errors << "#{sample_rate_khz} kHz is not a valid sample rate for a 16-bit lossless file"
-          end
-        when 24
-          unless [44_100, 88_200, 176_400, 352_800, 48_000, 96_000, 192_000, 384_000].include?(sample_rate)
-            sample_rate_khz = sample_rate.to_f / 100
-            errors << "#{sample_rate_khz} kHz is not a valid sample rate for a 24-bit lossless file"
-          end
-        when nil # will happen for Lossy formats
-          unless [44_100, 48_000].include?(sample_rate)
-            sample_rate_khz = sample_rate.to_f / 100
-            errors << "#{sample_rate_khz} kHz is not a valid sample rate for a lossy file format"
-          end
-        end
-      end
-
-      errors
+      @errors
     end
 
     # @return [String, nil] the full local file path to the spectrogram PNG, or
     #   nil if the process failed
     def spectrogram
-      name = File.basename(@path)
+      name = path.basename
 
       file = File.open(@path)
       md5 = OpenSSL::Digest::MD5.file(file)
@@ -269,6 +234,69 @@ module RedactedBetter
       def initialize(missing_attribute_name)
         super "File at path \"#{path}\" unable to determine media attribute: #{missing_attribute_name}"
       end
+    end
+
+    # Check the file and its path for errors and add any errors to the `errors` attribute.
+    #
+    # @return [Array<String>]
+    def check_for_errors
+      @errors += Tags.tag_errors(path)
+
+      # Check for invalid filenames
+      if (whitespace_led_component = Pathname(path).each_filename.to_a.find { |p| p.start_with?(/\s+/) })
+        @errors << "path contains a file or directory name with leading whitespace: #{whitespace_led_component}"
+      end
+
+      if (forbidden_substrings = FORBIDDEN_SUBSTRINGS.select { |fss| path.to_s.include?(fss) }).any?
+        @errors << "path contains invalid character(s): #{forbidden_substrings.join(" ")}"
+      end
+
+      if format == "FLAC"
+        _stdout, stderr, status = Open3.capture3("flac -wt \"#{path}\"")
+
+        unless status.success?
+          error_line = stderr.split("\n")
+                             .find { |line| line.include?(File.basename(path)) }
+
+          @errors << if error_line
+            "failed flac verification test: #{error_line}"
+          else
+            "failed flac verification test"
+          end
+        end
+      end
+
+      if (bit_depth && ![16, 24].include?(bit_depth))
+        @errors << "#{bit_depth} is an invalid bit depth"
+      elsif !bit_depth && format == "FLAC"
+        @errors << "unable to determine bit depth"
+      end
+
+      if sample_rate.nil?
+        @errors << "unable to determine sample rate"
+      else
+        case bit_depth
+        when 16
+          unless [44_100, 48_000].include?(sample_rate)
+            sample_rate_khz = sample_rate.to_f / 100
+            @errors << "#{sample_rate_khz} kHz is not a valid sample rate for a 16-bit lossless file"
+          end
+        when 24
+          unless [44_100, 88_200, 176_400, 352_800, 48_000, 96_000, 192_000, 384_000].include?(sample_rate)
+            sample_rate_khz = sample_rate.to_f / 100
+            @errors << "#{sample_rate_khz} kHz is not a valid sample rate for a 24-bit lossless file"
+          end
+        when nil # will happen for Lossy formats
+          unless [44_100, 48_000].include?(sample_rate)
+            sample_rate_khz = sample_rate.to_f / 100
+            @errors << "#{sample_rate_khz} kHz is not a valid sample rate for a lossy file format"
+          end
+        end
+      end
+
+      @checked_for_errors = true
+
+      @errors
     end
   end
 end

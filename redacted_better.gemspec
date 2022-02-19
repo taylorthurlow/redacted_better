@@ -14,12 +14,13 @@ Gem::Specification.new do |s|
   s.executables = ["redactedbetter"]
   s.platform = "ruby"
   s.require_paths = ["lib"]
-  s.required_ruby_version = ">= 2.6"
+  s.required_ruby_version = ">= 3.0"
 
   s.add_dependency "faraday", "~> 1.0.1"      # HTTP client
   s.add_dependency "faraday_middleware"
   s.add_dependency "flacinfo-rb", "~> 1.0"    # Inspect FLAC metadata/info
   s.add_dependency "htmlentities", "~> 4.3"   # Encode/decode HTML entities
+  s.add_dependency "marcel"
   s.add_dependency "mechanize", "~> 2.7"      # Automated web interaction
   s.add_dependency "mediainfo", "~> 1.5.0"
   s.add_dependency "os", "~> 1.1.4"
