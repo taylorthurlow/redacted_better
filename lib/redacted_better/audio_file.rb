@@ -3,6 +3,10 @@ require "mediainfo"
 
 module RedactedBetter
   class AudioFile
+    # @return [Array<String>] The list of substrings (typically single
+    #   characters) that are forbidden in file paths.
+    FORBIDDEN_SUBSTRINGS = %w[? : < > \\ * | " //].freeze
+
     # @return [String] full file path to audio file
     attr_reader :path
 
@@ -21,6 +25,15 @@ module RedactedBetter
       errors = []
 
       errors += Tags.tag_errors(path)
+
+      # Check for invalid filenames
+      if (whitespace_led_component = Pathname(path).each_filename.to_a.find { |p| p.start_with?(/\s+/) })
+        errors << "path contains a file or directory name with leading whitespace: #{whitespace_led_component}"
+      end
+
+      if (forbidden_substrings = FORBIDDEN_SUBSTRINGS.select { |fss| path.include?(fss) })
+        errors << "path contains invalid character(s): #{forbidden_substrings.join(" ")}"
+      end
 
       if format == "FLAC"
         _stdout, stderr, status = Open3.capture3("flac -wt \"#{path}\"")
