@@ -150,7 +150,9 @@ module RedactedBetter
 
         metadata[:edition_title] = prompt.ask("Edition title:")
 
-        metadata[:record_label] = prompt.ask("Record label:")
+        metadata[:record_label] = prompt.ask("Record label:") do |q|
+          q.default first_audio_file.label
+        end
         metadata[:catalogue_number] = prompt.ask("Catalogue number:")
 
         metadata[:scene] = prompt.yes?("Scene release?") do |q|

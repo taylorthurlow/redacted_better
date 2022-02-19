@@ -190,7 +190,12 @@ module RedactedBetter
 
     # @return [String, nil]
     def date
-      mediainfo.general.recorded_date.to_s
+      mediainfo.general.recorded_date&.to_s
+    end
+
+    # @return [String, nil]
+    def label
+      mediainfo.general.label&.to_s
     end
 
     # @!method bit_rate!
@@ -229,6 +234,9 @@ module RedactedBetter
     # @!method date!
     #   @return [String]
 
+    # @!method label!
+    #   @return [String]
+
     # Generate bang! accessors for certain mediainfo attributes that will raise
     # an exception if they return a nil value.
 
@@ -245,6 +253,7 @@ module RedactedBetter
       title
       track_number
       date
+      label
     ].each do |method|
       define_method("#{method}!".to_sym) do
         result = self.send(method)
