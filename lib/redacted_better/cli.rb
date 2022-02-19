@@ -213,14 +213,6 @@ module RedactedBetter
             q.convert :array
           end
 
-          metadata[:image_url_or_path] = prompt.ask("Image:") do |q|
-            q.validate ->(input) do
-                         uri_regexp = /^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
-
-                         input.nil? || input.empty? || input =~ uri_regexp || File.exist?(input)
-                       end
-          end
-
           metadata[:album_description] = if prompt.yes?("Generate album description from YADG?")
               api_key = @config.fetch(:yadg_api_key)
               raise "No configured YADG api key" unless api_key
@@ -239,6 +231,31 @@ module RedactedBetter
         metadata[:release_description] = prompt.multiline("Release description:") do |q|
           q.required true
         end
+
+        metadata[:image_url] = begin
+            if prompt.yes?("Upload image from file within torrent?")
+              local_image_path = prompt.select("Select image file", files.sort, filter: true)
+
+              if (images = Ptpimg.new(@config.fetch(:ptpimg_api_key)).upload([local_image_path]))
+                images.first[1]
+              else
+                warn Pastel.new.red("Network error uploading to ptpimg.")
+                nil
+              end
+            elsif prompt.yes?("Upload image from remote URL?")
+              remote_image_url = prompt.ask("Remote image URL:") { |q| q.required true }
+
+              if (images = Ptpimg.new(@config.fetch(:ptpimg_api_key)).upload_urls([remote_image_url]))
+                images.first[1]
+              else
+                warn Pastel.new.red("Network error uploading to ptpimg.")
+                nil
+              end
+            else
+              warn Pastel.yellow.new("Continuing without an image.")
+              nil
+            end
+          end
 
         puts JSON.pretty_generate(metadata)
         exit unless prompt.yes?("Does this metadata look OK?")
@@ -301,7 +318,7 @@ module RedactedBetter
         else
           post_body[:album_desc] = metadata.fetch(:album_description)
           post_body[:tags] = metadata.fetch(:tags).join(",")
-          post_body[:image] = metadata.fetch(:image_url_or_path)
+          post_body[:image] = metadata.fetch(:image_url)
         end
 
         response = @api.post(action: "upload", body: post_body)
