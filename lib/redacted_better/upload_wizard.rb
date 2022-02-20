@@ -134,16 +134,16 @@ module RedactedBetter
       end
 
       unless check_all_files_for_errors
-        warn Pastel.new.warn("Stopping because there was a problem with one or more files.")
+        Log.warning "Stopping because there was a problem with one or more files."
         exit 1
       end
 
-      puts "\nEverything looks good, continuing with data collection.\n\n"
+      Log.info "\nEverything looks good, continuing with data collection.\n\n"
 
       wizard_prompt = WizardPrompt.new(self)
       wizard_prompt.collect_complete_data
 
-      puts JSON.pretty_generate wizard_prompt.data
+      Log.info JSON.pretty_generate(wizard_prompt.data)
 
       return unless TTY::Prompt.new.yes?("OK to continue?")
 
