@@ -224,12 +224,12 @@ module RedactedBetter
       output_torrent_file_path = File.join(Dir.mktmpdir, "#{torrent_file_name}.torrent")
       tracker_url = "https://flacsfor.me/#{@user_passkey}/announce"
 
-      _stdout, _stderr, status = Open3.capture3(
+      _stdout, stderr, status = Open3.capture3(
         "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{path}\"",
       )
 
       unless status.success?
-        spinner.error(Pastel.new.red("Failed to create torrent file, exit status: #{status.exitstatus}"))
+        spinner.error(Pastel.new.red("Failed to create torrent file: Exit #{status.exitstatus}, #{stderr}"))
         exit 1
       end
 
