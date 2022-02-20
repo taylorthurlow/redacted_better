@@ -25,17 +25,14 @@ module RedactedBetter
     # @param path [String] the absolute path to either a single file (in the
     #   case of a single-file torrent) or the top-level torrent directory
     # @param config [Config]
-    # @param user_passkey [String]
-    # @param red_api [RedactedApi]
-    # @param yadg_client [Yadg, nil]
-    # @param ptpimg_client [Ptpimg, nil]
-    def initialize(path, config, user_passkey:, red_api:, yadg_client: nil, ptpimg_client: nil)
+    def initialize(path, config)
       @path = Pathname.new(path)
       @config = config
-      @user_passkey = user_passkey
-      @red_api = red_api
-      @yadg = yadg_client
-      @ptpimg = ptpimg_client
+
+      @red_api = RedactedApi.new(config.fetch(:api_key))
+      @yadg = Yadg.new(config.fetch(:yadg_api_key))
+      @ptpimg = Ptpimg.new(config.fetch(:ptpimg_api_key))
+      @user = @red_api.user
 
       @errors = []
 
@@ -222,7 +219,7 @@ module RedactedBetter
       )
 
       output_torrent_file_path = File.join(Dir.mktmpdir, "#{torrent_file_name}.torrent")
-      tracker_url = "https://flacsfor.me/#{@user_passkey}/announce"
+      tracker_url = "https://flacsfor.me/#{@user.fetch("passkey")}/announce"
 
       _stdout, stderr, status = Open3.capture3(
         "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{path}\"",

@@ -14,28 +14,19 @@ module RedactedBetter
       end
 
       @config = Config.new(@opts[:config])
-      @api = RedactedApi.new(@config.fetch(:api_key))
+      # @api = RedactedApi.new(@config.fetch(:api_key))
 
       @download_directory = @config.fetch(:directories, :download)
       @output_directory = @config.fetch(:directories, :output)
       @torrents_directory = @config.fetch(:directories, :torrents)
 
-      @user = confirm_api_connection
+      # @user = confirm_api_connection
     end
 
     # @return [void]
     def start
       if (new_torrent_path = @opts[:new])
-        wizard = UploadWizard.new(
-          new_torrent_path,
-          @config,
-          user_passkey: @user.fetch("passkey"),
-          red_api: @api,
-          yadg_client: (Yadg.new(@config.fetch(:yadg_api_key)) if @config.fetch(:yadg_api_key)),
-          ptpimg_client: (Ptpimg.new(@config.fetch(:ptpimg_api_key)) if @config.fetch(:ptpimg_api_key)),
-        )
-
-        wizard.start
+        UploadWizard.new(new_torrent_path, @config).start
       else
         @opts.args.each do |arg|
           url_data = parse_torrent_url(arg)

@@ -16,6 +16,18 @@ module RedactedBetter
       @base_url = "https://redacted.ch/"
     end
 
+    # @return [Hash] authenticated user data
+    def user
+      response = @api.get(action: "index")
+
+      if response.success?
+        response.data
+      else
+        Log.error "Failed to authenticate, check your API key."
+        exit 1
+      end
+    end
+
     # @param action [String] the API action name
     # @param params [Hash] additional URL parameters
     #
