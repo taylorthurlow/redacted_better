@@ -300,7 +300,7 @@ module RedactedBetter
 
     # (see #to_s)
     def self.build_string(artist, name, year, media, format)
-      "#{artist} - #{name} (#{year}) [#{media} #{format}]"
+      "#{artist} - #{name} (#{year}) [#{media} #{format}]".delete("/\0")
     end
 
     # Parses the file list in the format provided by the Redacted JSON API. The
