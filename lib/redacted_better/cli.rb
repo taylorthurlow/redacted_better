@@ -196,7 +196,7 @@ module RedactedBetter
           DESCRIPTION
 
           spectrals = []
-          if @config.fetch(:ptpimg_api_key, default: nil) && upload.fetch(:format) == "FLAC"
+          if @config.fetch(:ptpimg_api_key) && upload.fetch(:format) == "FLAC"
             ptpimg_client = Ptpimg.new(@config.fetch(:ptpimg_api_key))
           end
 
