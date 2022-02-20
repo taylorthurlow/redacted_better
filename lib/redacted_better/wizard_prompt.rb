@@ -288,7 +288,7 @@ module RedactedBetter
     end
 
     def prompt_image_url_or_path
-      return group.image if group.image
+      return group.image if group&.image
 
       if prompt.yes?("Upload image from file within torrent?")
         local_image_path = prompt.select(
