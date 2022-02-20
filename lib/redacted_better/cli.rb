@@ -195,10 +195,10 @@ module RedactedBetter
 
           DESCRIPTION
 
-          spectrals = []
-          if @config.fetch(:ptpimg_api_key) && upload.fetch(:format) == "FLAC"
-            ptpimg_client = Ptpimg.new(@config.fetch(:ptpimg_api_key))
-          end
+          # spectrals = []
+          # if @config.fetch(:ptpimg_api_key) && upload.fetch(:format) == "FLAC"
+          #   ptpimg_client = Ptpimg.new(@config.fetch(:ptpimg_api_key))
+          # end
 
           upload.fetch(:transcodes).each.with_index do |transcode, i|
             commands = transcode.command_list
@@ -207,42 +207,40 @@ module RedactedBetter
 
             final_file = File.join(@output_directory, upload.fetch(:name), File.basename(transcode.destination))
 
-            if ptpimg_client
-              sp.update(text: " - Generating spectrogram #{i + 1}...")
-              spectrals << generate_spectrogram(final_file)
-            end
+            # if ptpimg_client
+            #   sp.update(text: " - Generating spectrogram #{i + 1}...")
+            #   spectrals << generate_spectrogram(final_file)
+            # end
 
             release_description << <<~DESCRIPTION
               [hide="#{File.basename(transcode.destination)}"]
                 [quote][pre]#{`mediainfo "#{final_file}"`.chomp}[/pre][/quote]
 
                 [pre]#{commands}[/pre]
-
-                #{"{{spectral-#{i + 1}}}" if ptpimg_client}
               [/hide]
             DESCRIPTION
           end
 
           # TODO: Skip spectrals if ptpimg api key not configured
 
-          if ptpimg_client
-            sp.update(text: " - Uploading spectrograms...")
+          # if ptpimg_client
+          #   sp.update(text: " - Uploading spectrograms...")
 
-            if (images = ptpimg_client.upload(spectrals))
-              spectrals.each_with_index do |spectral_path, i|
-                release_description.gsub!(
-                  "{{spectral-#{i + 1}}}",
-                  <<~REPLACE,
-                  [img]#{images.fetch(spectral_path)}[/img]
-                REPLACE
-                )
-              end
-            else
-              spectrals.each_with_index do |_, i|
-                release_description.gsub!("{{spectral-#{i + 1}}}", "Failure to upload, sorry!")
-              end
-            end
-          end
+          #   if (images = ptpimg_client.upload(spectrals))
+          #     spectrals.each_with_index do |spectral_path, i|
+          #       release_description.gsub!(
+          #         "{{spectral-#{i + 1}}}",
+          #         <<~REPLACE,
+          #         [img]#{images.fetch(spectral_path)}[/img]
+          #       REPLACE
+          #       )
+          #     end
+          #   else
+          #     spectrals.each_with_index do |_, i|
+          #       release_description.gsub!("{{spectral-#{i + 1}}}", "Failure to upload, sorry!")
+          #     end
+          #   end
+          # end
 
           release_description = sanitize_personal_paths(release_description).chomp
 
