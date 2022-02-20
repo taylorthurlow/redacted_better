@@ -362,7 +362,14 @@ module RedactedBetter
           spinners.register("[:spinner] #{File.basename audio_file.path}") do |sp|
             if (spectrogram = audio_file.spectrogram)
               spectral_paths << spectrogram
-              release_description.gsub!("{{spectral-#{i + 1}}}", "{{spectral-#{spectrogram}}}")
+
+              spectral_template_tag = "{{spectral-#{i + 1}}}"
+
+              unless release_description.include?(spectral_template_tag)
+                spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
+              end
+
+              release_description.gsub!(spectral_template_tag, "{{spectral-#{spectrogram}}}")
               sp.success(Pastel.new.green("done."))
             else
               spectral_paths << nil
@@ -377,7 +384,13 @@ module RedactedBetter
         wizard.ptpimg
               .upload(spectral_paths)
               .each do |spectral_file_path, spectral_url|
-          release_description.gsub!("{{spectral-#{spectral_file_path}}}", spectral_url)
+          spectral_template_tag = "{{spectral-#{spectral_file_path}}}"
+
+          unless release_description.include?(spectral_template_tag)
+            spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
+          end
+
+          release_description.gsub!(spectral_template_tag, spectral_url)
         end
         spinner.success("done.")
       end
