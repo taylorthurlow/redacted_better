@@ -395,7 +395,13 @@ module RedactedBetter
         spinner.success("done.")
       end
 
-      sanitize_personal_paths(release_description).chomp
+      final = sanitize_personal_paths(release_description).chomp
+
+      if final.length >= 65_535
+        prompt.warn("The generated release description exceeds 65,536 characters and will be truncated.")
+      end
+
+      final
     end
 
     # @param string [String]
