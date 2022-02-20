@@ -29,11 +29,14 @@ module RedactedBetter
         UploadWizard.new(new_torrent_path, @config).start
       else
         @opts.args.each do |arg|
-          url_data = parse_torrent_url(arg)
-          torrent = @api.torrent(url_data[:torrent_id], @download_directory)
-          torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
+          wizard = TranscodeWizard.new(arg, @config)
 
-          handle_found_release(torrent_group, torrent)
+          wizard.start
+
+          require "pry-byebug"
+          binding.pry
+
+          puts "finish"
         end
       end
     end
@@ -265,24 +268,6 @@ module RedactedBetter
     #   end
     # end
 
-    # Takes a URL, meant to be provided on as a command-line parameter, and
-    # extracts the group and torrent ids from it. The URL format is:
-    # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
-    #
-    # @param url [String]
-    #
-    # @return [Hash{Symbol=>Integer}]
-    def parse_torrent_url(url)
-      match = url.match(/torrents\.php\?id=(\d+)&torrentid=(\d+)/)
-
-      if !match || !match[1] || !match[2]
-        Log.error("Unable to parse provided torrent URL.")
-        exit
-      end
-
-      { group_id: match[1].to_i, torrent_id: match[2].to_i }
-    end
-
     # @return [Hash{String=>String}]
     def libraries_breakdown
       convmv = begin
@@ -298,7 +283,7 @@ module RedactedBetter
         "sox" => `sox --version`.strip.gsub(/^sox:\s+/, ""),
         "mktorrent" => `mktorrent -h`.split("\n").first.strip,
         "lame" => `lame --version`.split("\n").first,
-        "mediainfo" => `mediainfo --version`.gsub("\n", " ").strip,
+        "mediainfo" => `mediainfo --version`.tr("\n", " ").strip,
         "convmv" => convmv || "not installed",
       }
     end
@@ -310,23 +295,6 @@ module RedactedBetter
       string.gsub(@torrents_directory, "/anon_torrents_dir")
             .gsub(@output_directory, "/anon_output_dir")
             .gsub(@download_directory, "/anon_download_dir")
-    end
-
-    # @return [Hash] authenticated user data
-    def confirm_api_connection
-      spinner = TTY::Spinner.new("[:spinner] Authenticating...")
-      spinner.auto_spin
-
-      response = @api.get(action: "index")
-
-      if response.success?
-        spinner.success("successfully authenticated user: #{response.data["username"]}")
-
-        response.data
-      else
-        spinner.error("failed to authenticate, check your API key.")
-        exit 1
-      end
     end
 
     # @param file_path [String]
@@ -364,7 +332,7 @@ module RedactedBetter
         o.bool "-h", "--help", "print help"
         o.on "-v", "--version", "print the version" do
           puts RedactedBetter::VERSION
-          exit
+          exit 0
         end
       end
     end

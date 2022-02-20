@@ -8,25 +8,25 @@ module RedactedBetter
     # @return [Group, nil]
     attr_reader :group
 
-    attr_reader :group_id
-    attr_reader :artist
-    attr_reader :release_name
-    attr_reader :release_type
-    attr_reader :initial_year
-    attr_reader :edition_year
-    attr_reader :edition_title
-    attr_reader :record_label
-    attr_reader :catalogue_number
-    attr_reader :scene
-    attr_reader :vanity_house
-    attr_reader :format
-    attr_reader :bitrate
-    attr_reader :media
-    attr_reader :log_files
-    attr_reader :tags
-    attr_reader :album_description
-    attr_reader :image_url_or_path
-    attr_reader :release_description
+    attr_accessor :group_id
+    attr_accessor :artist
+    attr_accessor :release_name
+    attr_accessor :release_type
+    attr_accessor :initial_year
+    attr_accessor :edition_year
+    attr_accessor :edition_title
+    attr_accessor :record_label
+    attr_accessor :catalogue_number
+    attr_accessor :scene
+    attr_accessor :vanity_house
+    attr_accessor :format
+    attr_accessor :bitrate
+    attr_accessor :media
+    attr_accessor :log_files
+    attr_accessor :tags
+    attr_accessor :album_description
+    attr_accessor :image_url_or_path
+    attr_accessor :release_description
 
     PROMPTABLE_ATTRIBUTES = %i[
       group_id artist release_name release_type initial_year edition_year
@@ -36,9 +36,13 @@ module RedactedBetter
     ].freeze
 
     # @param wizard [UploadWizard]
-    def initialize(wizard)
+    def initialize(wizard, group: nil)
       @wizard = wizard
-      @group = nil
+
+      if group
+        @group = group
+        @group_id = group.id
+      end
     end
 
     # Prompt for values for any "promptable" attribute that has a value of nil.
@@ -204,28 +208,13 @@ module RedactedBetter
     end
 
     def prompt_format
-      prompt.select("Format:", %w[MP3 FLAC AAC AC3 DTS], filter: true) do |q|
+      prompt.select("Format:", Torrent.valid_format, filter: true) do |q|
         q.default wizard.audio_files.first.format
       end
     end
 
     def prompt_bitrate
-      prompt.select(
-        "Bitrate:",
-        [
-          "Lossless",
-          "24bit Lossless",
-          "320",
-          "256",
-          "192",
-          "V0 (VBR)",
-          "V1 (VBR)",
-          "V2 (VBR)",
-          "APS (VBR)",
-          "APX (VBR)",
-        ],
-        filter: true,
-      ) do |q|
+      prompt.select("Bitrate:", Torrent.valid_encoding, filter: true) do |q|
         if wizard.audio_files.first.format == "FLAC"
           q.default wizard.audio_files.first.bit_depth == 24 ? "24bit Lossless" : "Lossless"
         end
@@ -233,21 +222,7 @@ module RedactedBetter
     end
 
     def prompt_media
-      prompt.select(
-        "Media:",
-        [
-          "CD",
-          "WEB",
-          "Vinyl",
-          "Soundboard",
-          "DVD",
-          "Blu-Ray",
-          "Cassette",
-          "SACD",
-          "DAT",
-        ],
-        filter: true,
-      ) do |q|
+      prompt.select("Media:", Torrent.valid_media, filter: true) do |q|
         q.default wizard.relative_file_paths.any? { |p| p.extname.downcase == ".log" } ? "CD" : "WEB"
       end
     end

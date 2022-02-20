@@ -18,7 +18,7 @@ module RedactedBetter
 
     # @return [Hash] authenticated user data
     def user
-      response = @api.get(action: "index")
+      response = get(action: "index")
 
       if response.success?
         response.data
@@ -76,44 +76,26 @@ module RedactedBetter
     # Fetch a torrent from the API.
     #
     # @param id [Integer]
-    # @param download_directory [String]
     #
     # @return [Torrent]
-    def torrent(id, download_directory)
-      response = get(
-        action: "torrent",
-        params: { id: id },
-      )
+    def torrent(id)
+      response = get(action: "torrent", params: { id: id })
 
-      data = response.data
-      data["group"].delete("wikiBody")
-      data["group"].delete("bbBody")
+      group = Group.new(response.data["group"])
 
-      group = Group.new(data["group"])
-
-      Torrent.new(response.data["torrent"], group, download_directory)
+      Torrent.new(response.data["torrent"], group)
     end
 
     # Fetch a torrent group from the API, including child torrents.
     #
     # @param id [Integer]
-    # @param download_directory [String]
     #
     # @return [Group]
-    def torrent_group(id, download_directory)
-      response = get(
-        action: "torrentgroup",
-        params: { id: id },
-      )
+    def torrent_group(id)
+      response = get(action: "torrentgroup", params: { id: id })
 
-      data = response.data
-      data["group"].delete("wikiBody")
-      data["group"].delete("bbBody")
-
-      group = Group.new(data["group"])
-      group.torrents += data["torrents"].map do |t|
-        Torrent.new(t, group, download_directory)
-      end
+      group = Group.new(response.data["group"])
+      group.torrents += response.data["torrents"].map { |t| Torrent.new(t, group) }
 
       group
     end
@@ -152,10 +134,7 @@ module RedactedBetter
 
       body_data[:scene] = true if source_torrent.scene
 
-      response = post(
-        action: "upload",
-        body: body_data,
-      )
+      response = post(action: "upload", body: body_data)
 
       response.success?
     end

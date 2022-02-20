@@ -2,10 +2,9 @@ require "marcel"
 require "pathname"
 
 module RedactedBetter
-  class UploadWizard
-    # @return [Pathname] the absolute path to either a single file (in the case
-    #   of a single-file torrent) or the top-level torrent directory
-    attr_reader :path
+  class TranscodeWizard
+    # @return [String] the RED URL to the source FLAC torrent to transcode
+    attr_reader :source_torrent_url
 
     # @return [Config]
     attr_reader :config
@@ -16,52 +15,68 @@ module RedactedBetter
     # @return [RedactedApi]
     attr_reader :red_api
 
-    # @return [Ptpimg, nil]
+    # @return [Ptpimg]
     attr_reader :ptpimg
 
-    # @return [Yadg, nil]
+    # @return [Yadg]
     attr_reader :yadg
 
-    # @param path [String] the absolute path to either a single file (in the
-    #   case of a single-file torrent) or the top-level torrent directory
+    # @return [Group]
+    attr_reader :group
+
+    # @return [Torrent]
+    attr_reader :torrent
+
+    # @return [Pathname] the absolute path to the top-level source torrent
+    #   directory
+    attr_reader :absolute_top_level_directory
+
+    # @param source_torrent_url [String] the RED URL to the source FLAC torrent
+    #   to transcode
     # @param config [Config]
-    def initialize(path, config)
-      @path = Pathname.new(path)
+    def initialize(source_torrent_url, config)
+      @source_torrent_url = source_torrent_url
       @config = config
 
       @red_api = RedactedApi.new(config.fetch(:api_key))
       @yadg = Yadg.new(config.fetch(:yadg_api_key))
       @ptpimg = Ptpimg.new(config.fetch(:ptpimg_api_key))
+
       @user = @red_api.user
 
       @errors = []
+      group_id, torrent_id = ids_from_torrent_url(source_torrent_url)
 
-      raise "Provided path does not exist." unless @path.exist?
+      @group = @red_api.torrent_group(group_id)
+      @torrent = @red_api.torrent(torrent_id)
+
+      @absolute_top_level_directory = Pathname.new(
+        File.join(
+          @config.fetch(:directories, :download),
+          torrent.file_path,
+        ).delete_suffix("/")
+      )
     end
 
-    alias_method :absolute_top_level_directory, :path
-
-    # Get a list of absolute file paths for each file within the path directory
-    # structure, regardless of file type.
+    # A list of absolute file paths for each file of the source torrent.
     #
     # @return [Array<Pathname>]
     def absolute_file_paths
-      @absolute_file_paths = if single_file?
-          [path]
-        else
-          path.glob("**/*")
-              .reject { |p| File.directory?(p) }
-              .map { |ap| Pathname.new(ap) }
+      @absolute_file_paths ||= begin
+          download_directory = @config.fetch(:directories, :download)
+
+          torrent.relative_file_paths.map do |p|
+            Pathname.new(File.join(download_directory, p))
+          end
         end
     end
 
-    # Get a list of file paths for each file within the path directory
-    # structure, regardless of file type. Paths relative to (but still
-    # including) the top-level torrent directory are provided.
+    # Build a list of relative file paths including the top-level torrent
+    # directory (if it is present).
     #
     # @return [Array<Pathname>]
     def relative_file_paths
-      @relative_file_paths ||= absolute_file_paths.map { |p| p.sub("#{path.dirname}/", "") }
+      torrent.relative_file_paths
     end
 
     # Build a hash map between absolute paths (keys) and relative paths
@@ -88,38 +103,60 @@ module RedactedBetter
       @absolute_non_audio_file_paths ||= absolute_file_paths.reject { |p| audio_files.map(&:path).include?(p) }
     end
 
-    # Get a list of file paths for each file within the path directory structure
+    # a list of file paths for each file within the path directory structure
     # that is not an audio-file. Paths relative to (but still including) the
     # top-level torrent directory are provided.
     #
     # @return [Array<Pathname>]
     def relative_non_audio_file_paths
-      absolute_non_audio_file_paths.map { |p| p.sub("#{path.dirname}/", "") }
+      absolute_non_audio_file_paths.map { |p| p.sub("#{absolute_top_level_directory.dirname}/", "") }
     end
 
     # @return [Array<AudioFile>]
     def audio_files
-      @audio_files ||= absolute_file_paths.select { |p| AudioFile::ALLOWED_MIMETYPES.include? Marcel::MimeType.for(p) }
-                                          .map { |p| AudioFile.new(p) }
-    end
-
-    # The path which contains the torrent directory (in the case of a multi-file
-    # upload) or contains the single file (in the case of a single-file upload).
-    #
-    # @return [Pathname]
-    def containing_directory
-      path.dirname
-    end
-
-    # @return [Boolean]
-    def single_file?
-      path.file?
+      @audio_files ||=
+        absolute_file_paths.select { |p| AudioFile::ALLOWED_MIMETYPES.include? Marcel::MimeType.for(p) }
+                           .map { |p| AudioFile.new(p) }
     end
 
     # @return [void]
     def start
+      Log.info <<~INFO
+                 Matched group ID #{group.id}:
+                   #{group.name} (#{group.year})
+                   Artist(s): #{group.artists.map { |a| a["name"] }.join(", ")}
+                  
+                   Label: #{group.record_label}
+                   Release type: #{group.release_type}
+                   Category ID: #{group.category_id}
+                   Category name: #{group.category_name}
+                   Vanity house: #{group.vanity_house}
+                   Tags: #{group.tags}
+               INFO
+
+      # Determine if we can upload any transcodes
+      formats_missing = nil
+      TTY::Spinner.new("[:spinner] Checking for possible transcodes...")
+                  .tap do |spinner|
+        spinner.auto_spin
+
+        formats_missing = group.formats_missing(torrent)
+
+        if formats_missing.any?
+          spinner.success(Pastel.new.green("found"))
+        else
+          spinner.error(Pastel.new.yellow("no missing formats found"))
+        end
+      end
+
+      Log.info "Formats missing:"
+      formats_missing.each do |f|
+        Log.info "- #{Torrent.build_format(f[0], f[1])}"
+      end
+      Log.info ""
+
       # Parse audio files to generate AudioFile list
-      TTY::Spinner.new("[:spinner] Locating audio files...")
+      TTY::Spinner.new("[:spinner] Locating source audio files...")
                   .tap do |spinner|
         spinner.auto_spin
 
@@ -133,22 +170,32 @@ module RedactedBetter
       end
 
       unless check_all_files_for_errors
-        Log.warning "Stopping because there was a problem with one or more files."
+        Log.warn "Stopping because there was a problem with one or more files."
         exit 1
       end
 
-      Log.info "\nEverything looks good, continuing with data collection.\n\n"
+      wizard_prompt = WizardPrompt.new(self, group: group).tap do |wiz|
+        wiz.group_id = group.id
+        wiz.edition_year = torrent.year
+        wiz.edition_title = torrent.remaster_title
+        wiz.record_label = torrent.remaster_record_label
+        wiz.catalogue_number = torrent.remaster_catalogue_number
+        wiz.scene = torrent.scene
+        wiz.format = torrent.format
+        wiz.bitrate = torrent.encoding
+        wiz.media = torrent.media
+        wiz.log_files = []
+      end
 
-      wizard_prompt = WizardPrompt.new(self)
       wizard_prompt.collect_complete_data
 
-      Log.info JSON.pretty_generate(wizard_prompt.data)
+      # puts JSON.pretty_generate wizard_prompt.data
 
-      return unless TTY::Prompt.new.yes?("OK to continue?")
+      # return unless TTY::Prompt.new.yes?("OK to continue?")
 
-      torrent_absolute_file_path = create_torrent_file(wizard_prompt)
+      # torrent_absolute_file_path = create_torrent_file(wizard_prompt)
 
-      upload_torrent(torrent_absolute_file_path, wizard_prompt)
+      # upload_torrent(torrent_absolute_file_path, wizard_prompt)
     end
 
     # @return [Boolean] true if no errors found, or if errors found do not
@@ -158,7 +205,7 @@ module RedactedBetter
       absolute_audio_file_paths = audio_files.map(&:path)
       spinners = TTY::Spinner::Multi.new("[:spinner] Pre-processing files:")
 
-      file_paths_map_without_root = file_paths_map.transform_values { |v| v.sub("#{path.basename}/", "") }
+      file_paths_map_without_root = file_paths_map.transform_values { |v| v.sub("#{absolute_top_level_directory.basename}/", "") }
       longest_name_length = file_paths_map_without_root.values.map { |p| p.to_s.length }.max
 
       absolute_file_paths.each do |absolute_file_path|
@@ -295,8 +342,28 @@ module RedactedBetter
       end
     end
 
+    # Takes a URL, meant to be provided on as a command-line parameter, and
+    # extracts the group and torrent ids from it. The URL format is:
+    # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
+    #
+    # @param url [String]
+    #
+    # @return [Array(Integer, Integer)] the group id, and the torrent id, in
+    #   that order
+    def ids_from_torrent_url(url)
+      match = url.match(/torrents\.php\?id=(\d+)&torrentid=(\d+)/)
+
+      if !match || !match[1] || !match[2]
+        Log.error("Unable to parse provided torrent URL.")
+        exit 1
+      end
+
+      [match[1].to_i, match[2].to_i]
+    end
+
+    # @return [String]
     def inspect
-      "UploadWizard"
+      "TranscodeWizard"
     end
   end
 end

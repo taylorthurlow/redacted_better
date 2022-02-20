@@ -39,14 +39,10 @@ module RedactedBetter
     # @return [Group]
     attr_accessor :group
 
-    # @return [String]
-    attr_accessor :download_directory
-
     # @param data_hash [Hash] the data hash which comes directly from the Redacted
     #   JSON API
     # @param group [Group] the torrent group to which this torrent belongs
-    # @param download_directory [String] the path to the download directory
-    def initialize(data_hash, group, download_directory)
+    def initialize(data_hash, group)
       data_hash = Utils.deep_unescape_html(data_hash)
       data_hash = Utils.deep_unicode_normalize(data_hash)
 
@@ -63,7 +59,6 @@ module RedactedBetter
       @scene = data_hash["scene"]
       @file_path = data_hash["filePath"]
       @file_list = Torrent.parse_file_list(data_hash["fileList"])
-      @download_directory = download_directory
     end
 
     # Determines the release year of the torrent.
@@ -104,86 +99,16 @@ module RedactedBetter
       !file_path.empty?
     end
 
-    # The list of absolute file paths in the torrent.
+    # Build a list of relative file paths including the top-level torrent
+    # directory (if it is present).
     #
-    # @return [Array<String>]
-    def files
-      file_list.map { |f| File.join(download_directory, file_path, f) }
-    end
-
-    # The list of absolute file paths which represent files present on disk.
-    #
-    # @return [Array<String>]
-    def files_present
-      files.select { |f| File.exist?(f) }
-    end
-
-    # The list of absolute file paths which represent files missing on disk.
-    #
-    # @return [Array<String>]
-    def files_missing
-      files - files_present
-    end
-
-    # The list of absolute file paths representing flac files in the torrent.
-    #
-    # @return [Array<String>]
-    def flac_files
-      files.select { |f| File.extname(f).casecmp(".flac").zero? }
-    end
-
-    # The list of absolute file paths representing flac files with valid tags.
-    #
-    # @return [Array<String>]
-    def flac_files_with_valid_tags
-      raise "Cannot check for valid tags when some files are missing on disk." if files_missing.any?
-
-      flac_files.select { |f| Tags.valid_tags?(f) }
-    end
-
-    # The list of absolute file paths representing flac files with invalid
-    # tags.
-    #
-    # @return [Array<String>]
-    def flac_files_with_invalid_tags
-      flac_files - flac_files_with_valid_tags
-    end
-
-    # The list of absolute file paths representing flac files which contain
-    # multichannel audio, meaning they have more than 2 channels.
-    #
-    # @return [Array<String>]
-    def multichannel_files
-      raise "Cannot check for multichannel files when some files are missing on disk." if files_missing.any?
-
-      flac_files.select { |f| Transcode.file_is_multichannel?(f) }
-    end
-
-    # The list of absolute file paths representing flac files which are of a
-    # bitrate higher than 16-bit, which typically means 24-bit.
-    #
-    # @return [Array<String>]
-    def extreme_bitrate_files
-      raise "Cannot check for extreme bitrate files when some files are missing on disk." if files_missing.any?
-
-      flac_files.select { |f| Transcode.file_is_24bit?(f) }
-    end
-
-    # Determine if all FLAC files are of an extreme bitrate.
-    #
-    # @return [Boolean]
-    def all_extreme_bitrate?
-      flac_files.sort == extreme_bitrate_files.sort
-    end
-
-    # Determines if the torrent is mislabeled as 16-bit. Some torrents which
-    # are **not** labeled as 24-bit are actually 24-bit, due to user error or
-    # sometimes torrents which have a mix of both 24- and 16-bit files.
-    #
-    # @return [Boolean] true if all files are 24-bit but the torrent is not
-    #   labeled as such, false otherwise
-    def mislabeled_24bit?
-      all_extreme_bitrate? && encoding != "24bit Lossless"
+    # @return [Array<Pathname>]
+    def relative_file_paths
+      if properly_contained?
+        file_list.map { |fn| Pathname.new(File.join(file_path, fn).delete_prefix("/")) }
+      else
+        file_list.map { |fn| Pathname.new(fn) }
+      end
     end
 
     # @see .build_format
@@ -255,7 +180,7 @@ module RedactedBetter
 
     # A list of valid media sources which can be transcode sources.
     def self.valid_media
-      %w[CD DVD Vinyl Soundboard SACD DAT Cassette WEB Blu-Ray]
+      %w[WEB CD WEB Vinyl Blu-Ray DVD Soundboard SACD DAT Cassette]
     end
 
     # A list of valid media formats which can be uploaded.
@@ -266,10 +191,9 @@ module RedactedBetter
     # A list of valid media encoding methods which can be uploaded.
     def self.valid_encoding
       [
-        "192", "256", "320",
-        "V0 (VBR)", "V1 (VBR)", "V2 (VBR)", "APS (VBR)", "APX (VBR)",
         "Lossless", "24bit Lossless",
-        "Other",
+        "320", "256", "192",
+        "V0 (VBR)", "V1 (VBR)", "V2 (VBR)", "APS (VBR)", "APX (VBR)",
       ]
     end
 

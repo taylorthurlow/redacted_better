@@ -99,8 +99,8 @@ module RedactedBetter
     #   are looking to query. A group may contain many release groups, and we
     #   need one torrent from that group to find the specific release group.
     #
-    # @return [Array<String, String>] A list of format/encoding pairs representing
-    #   all formats missing from the release group.
+    # @return [Array(String, String)] A list of format/encoding pairs
+    #   representing all formats missing from the release group.
     def formats_missing(torrent)
       present = release_group_torrents(torrent).map { |t| [t.format, t.encoding] }
 
