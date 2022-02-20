@@ -29,6 +29,8 @@ module RedactedBetter
         wizard = UploadWizard.new(
           new_torrent_path,
           @config,
+          user_passkey: @user.fetch("passkey"),
+          red_api: @api,
           yadg_client: (Yadg.new(@config.fetch(:yadg_api_key)) if @config.fetch(:yadg_api_key)),
           ptpimg_client: (Ptpimg.new(@config.fetch(:ptpimg_api_key)) if @config.fetch(:ptpimg_api_key)),
         )

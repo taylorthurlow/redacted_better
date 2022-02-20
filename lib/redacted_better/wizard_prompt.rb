@@ -5,6 +5,9 @@ module RedactedBetter
     # @return [UploadWizard]
     attr_reader :wizard
 
+    # @return [Group, nil]
+    attr_reader :group
+
     attr_reader :group_id
     attr_reader :artist
     attr_reader :release_name
@@ -35,6 +38,7 @@ module RedactedBetter
     # @param wizard [UploadWizard]
     def initialize(wizard)
       @wizard = wizard
+      @group = nil
     end
 
     # Prompt for values for any "promptable" attribute that has a value of nil.
@@ -51,12 +55,8 @@ module RedactedBetter
 
     # @return [Hash{Symbol=>Object}]
     def data
-      PROMPTABLE_ATTRIBUTES.to_h do |promptable_attribute|
-        [
-          promptable_attribute,
-          send(promptable_attribute),
-        ]
-      end
+      PROMPTABLE_ATTRIBUTES.to_h { |at| [at, send(at)] }
+                           .compact
     end
 
     # @return [String]
@@ -75,13 +75,34 @@ module RedactedBetter
 
     # @return [Integer]
     def prompt_group_id
-      prompt.ask("Group ID number, if it exists:") do |q|
+      group_id = prompt.ask("Group ID number, if it exists:") do |q|
         q.convert :integer
       end
+
+      @group = group_from_group_id(group_id)
+
+      prompt.say <<~SAY
+
+                   Matched group ID #{group_id}:
+                     #{@group.name} (#{group.year})
+                     Artist(s): #{group.artists.map { |a| a["name"] }.join(", ")}
+
+                     Label: #{group.record_label}
+                     Release type: #{group.release_type}
+                     Category ID: #{group.category_id}
+                     Category name: #{group.category_name}
+                     Vanity house: #{group.vanity_house}
+                     Tags: #{group.tags}
+
+                 SAY
+
+      group_id
     end
 
     # @return [String]
     def prompt_artist
+      return group.artists.first["name"] if group
+
       prompt.ask("Artist:") do |q|
         q.required true
         q.default wizard.audio_files.first.artist
@@ -90,6 +111,8 @@ module RedactedBetter
 
     # @return [String]
     def prompt_release_name
+      return group.name if group
+
       prompt.ask("Release name:") do |q|
         q.required true
         q.default wizard.audio_files.first.album
@@ -98,6 +121,8 @@ module RedactedBetter
 
     # @return [Integer]
     def prompt_release_type
+      return group.release_type if group
+
       prompt.select(
         "Release type:",
         [
@@ -124,6 +149,8 @@ module RedactedBetter
     end
 
     def prompt_initial_year
+      return group.year if group
+
       prompt.ask("Initial year:") do |q|
         q.required true
 
@@ -146,12 +173,14 @@ module RedactedBetter
 
     def prompt_record_label
       prompt.ask("Record label:") do |q|
-        q.default wizard.audio_files.first.label
+        q.default wizard.audio_files.first.label || group&.record_label
       end
     end
 
     def prompt_catalogue_number
-      prompt.ask("Catalogue number:")
+      prompt.ask("Catalogue number:") do |q|
+        q.default group&.catalogue_number
+      end
     end
 
     def prompt_scene
@@ -165,6 +194,8 @@ module RedactedBetter
     end
 
     def prompt_vanity_house
+      return group.vanity_house if group
+
       prompt.yes?("Vanity house release?") do |q|
         q.default false
       end
@@ -230,18 +261,17 @@ module RedactedBetter
     end
 
     def prompt_tags
-      return unless group_id
+      return if group
 
       prompt.ask("Tags (comma-separated)") do |q|
         q.modify :down, :remove
         q.validate ->(input) { input.nil? || input.empty? || input =~ /\A[A-Za-z0-9.,]+\Z/ }
         q.messages[:valid?] = "Invalid tags, must contain only a-z, 0-9, and periods"
-        q.convert :array
       end
     end
 
     def prompt_album_description
-      return unless group_id
+      return if group
 
       if prompt.yes?("Generate album description from YADG?")
         url = prompt.ask("Metadata URL:") do |q|
@@ -251,11 +281,13 @@ module RedactedBetter
         wizard.yadg.description(url)
       else
         prompt.multiline("Album description:") { |q| q.required true }
-              .join("")
+              .join
       end
     end
 
     def prompt_image_url_or_path
+      return group.image if group.image
+
       if prompt.yes?("Upload image from file within torrent?")
         local_image_path = prompt.select(
           "Select image file",
@@ -360,6 +392,15 @@ module RedactedBetter
       string.gsub(wizard.config.fetch(:directories, :torrents), "/anon_torrents_dir")
             .gsub(wizard.config.fetch(:directories, :output), "/anon_output_dir")
             .gsub(wizard.config.fetch(:directories, :download), "/anon_download_dir")
+    end
+
+    # @param group_id [String, Integer]
+    #
+    # @return [Group]
+    def group_from_group_id(group_id)
+      response = wizard.red_api.get(action: "torrentgroup", params: { id: group_id })
+
+      Group.new(response.data["group"])
     end
   end
 end

@@ -13,6 +13,9 @@ module RedactedBetter
     # @return [Array<String>] a list of errors
     attr_reader :errors
 
+    # @return [RedactedApi]
+    attr_reader :red_api
+
     # @return [Ptpimg, nil]
     attr_reader :ptpimg
 
@@ -22,11 +25,15 @@ module RedactedBetter
     # @param path [String] the absolute path to either a single file (in the
     #   case of a single-file torrent) or the top-level torrent directory
     # @param config [Config]
+    # @param user_passkey [String]
+    # @param red_api [RedactedApi]
     # @param yadg_client [Yadg, nil]
     # @param ptpimg_client [Ptpimg, nil]
-    def initialize(path, config, yadg_client: nil, ptpimg_client: nil)
+    def initialize(path, config, user_passkey:, red_api:, yadg_client: nil, ptpimg_client: nil)
       @path = Pathname.new(path)
       @config = config
+      @user_passkey = user_passkey
+      @red_api = red_api
       @yadg = yadg_client
       @ptpimg = ptpimg_client
 
@@ -136,7 +143,13 @@ module RedactedBetter
       wizard_prompt = WizardPrompt.new(self)
       wizard_prompt.collect_complete_data
 
-      puts wizard_prompt.data
+      puts JSON.pretty_generate wizard_prompt.data
+
+      return unless TTY::Prompt.new.yes?("OK to continue?")
+
+      torrent_absolute_file_path = create_torrent_file(wizard_prompt)
+
+      upload_torrent(torrent_absolute_file_path, wizard_prompt)
     end
 
     # @return [Boolean] true if no errors found, or if errors found do not
@@ -188,7 +201,12 @@ module RedactedBetter
       all_files_ok
     end
 
-    def start_old
+    # @param wizard_prompt [WizardPrompt]
+    #
+    # @return [Pathname] absolute path to the torrent file
+    def create_torrent_file(wizard_prompt)
+      metadata = wizard_prompt.data
+
       spinner = TTY::Spinner.new("[:spinner] Generating torrent file...")
       spinner.auto_spin
 
@@ -204,7 +222,7 @@ module RedactedBetter
       )
 
       output_torrent_file_path = File.join(Dir.mktmpdir, "#{torrent_file_name}.torrent")
-      tracker_url = "https://flacsfor.me/#{@user.fetch("passkey")}/announce"
+      tracker_url = "https://flacsfor.me/#{@user_passkey}/announce"
 
       _stdout, _stderr, status = Open3.capture3(
         "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{path}\"",
@@ -212,16 +230,27 @@ module RedactedBetter
 
       unless status.success?
         spinner.error(Pastel.new.red("Failed to create torrent file, exit status: #{status.exitstatus}"))
-        exit
+        exit 1
       end
 
       spinner.success(Pastel.new.green("done: #{torrent_file_name}.torrent"))
 
+      Pathname.new output_torrent_file_path
+    end
+
+    # @param absolute_torrent_file_path [Pathname]
+    # @param wizard_prompt [WizardPrompt]
+    #
+    # @return [void]
+    def upload_torrent(absolute_torrent_file_path, wizard_prompt)
       spinner = TTY::Spinner.new("[:spinner] Uploading to RED...")
       spinner.auto_spin
 
+      metadata = wizard_prompt.data
+
       post_body = {
-        file_input: Faraday::FilePart.new(File.open(output_torrent_file_path), "application/x-bittorrent"),
+        groupid: metadata[:group_id],
+        file_input: Faraday::FilePart.new(File.open(absolute_torrent_file_path), "application/x-bittorrent"),
         type: 0, # music
         artists: [metadata.fetch(:artist)],
         importance: [1],
@@ -239,36 +268,31 @@ module RedactedBetter
         logfiles: metadata.fetch(:log_files, [])
                           .map { |lf| Faraday::FilePart.new(File.open(lf), "text/plain") },
         vanity_house: metadata.fetch(:vanity_house),
+        album_desc: metadata[:album_description],
+        tags: metadata[:tags],
         release_desc: metadata.fetch(:release_description),
-      }
+        image: metadata[:image_url_or_path],
+      }.compact
 
-      if metadata[:group_id]
-        post_body[:groupid] = metadata.fetch(:group_id)
-      else
-        post_body[:album_desc] = metadata.fetch(:album_description)
-        post_body[:tags] = metadata.fetch(:tags).join(",")
-        post_body[:image] = metadata.fetch(:image_url)
-      end
-
-      response = @api.post(action: "upload", body: post_body)
+      response = red_api.post(action: "upload", body: post_body)
 
       if response.success?
-        FileUtils.cp(output_torrent_file_path, @torrents_directory)
+        FileUtils.cp(absolute_torrent_file_path, config.fetch(:directories, :torrents))
         new_url = "https://redacted.ch/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
         spinner.success(Pastel.new.green("done: #{new_url}"))
 
-        if metadata[:format] == "FLAC" && prompt.yes?("Upload transcodes as well?")
-          url_data = parse_torrent_url(new_url)
-          torrent = @api.torrent(url_data[:torrent_id], @download_directory)
-          torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
+        # if metadata[:format] == "FLAC" && prompt.yes?("Upload transcodes as well?")
+        #   url_data = parse_torrent_url(new_url)
+        #   torrent = @api.torrent(url_data[:torrent_id], @download_directory)
+        #   torrent_group = @api.torrent_group(url_data[:group_id], @download_directory)
 
-          handle_found_release(torrent_group, torrent)
-        end
+        #   handle_found_release(torrent_group, torrent)
+        # end
       else
         message = "Failed to upload, response code: #{response.code}"
         spinner.error(Pastel.new.red(message))
         warn Pastel.new.red(response.data)
-        exit
+        exit 1
       end
     end
   end

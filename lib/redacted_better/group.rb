@@ -12,6 +12,9 @@ module RedactedBetter
     # @return [String]
     attr_accessor :record_label
 
+    # @return [String]
+    attr_accessor :catalogue_number
+
     # @return [Array<Hash>]
     attr_accessor :artists
 
@@ -30,6 +33,9 @@ module RedactedBetter
     # @return [String]
     attr_accessor :tags
 
+    # @return [String]
+    attr_accessor :image
+
     # @return [Array<Torrent>] the list of torrents within the group
     attr_accessor :torrents
 
@@ -44,11 +50,13 @@ module RedactedBetter
       @artists = data_hash["musicInfo"]["artists"]
       @year = data_hash["year"]
       @record_label = data_hash["recordLabel"]
+      @catalogue_number = data_hash["catalogueNumber"]
       @release_type = data_hash["releaseType"]
       @category_id = data_hash["categoryId"]
       @category_name = data_hash["categoryName"]
       @vanity_house = data_hash["vanityHouse"]
       @tags = data_hash["tags"].join(",")
+      @image = data_hash["wikiImage"]
       @torrents = []
     end
 
