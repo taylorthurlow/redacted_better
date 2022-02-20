@@ -79,6 +79,8 @@ module RedactedBetter
         q.convert :integer
       end
 
+      return unless group_id
+
       @group = group_from_group_id(group_id)
 
       prompt.say <<~SAY
