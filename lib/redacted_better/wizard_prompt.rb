@@ -1,4 +1,5 @@
 require "json"
+require "mutex"
 
 module RedactedBetter
   class WizardPrompt
@@ -318,6 +319,7 @@ module RedactedBetter
 
     def prompt_release_description
       release_description = ""
+      release_description_mutex = Mutex.new
 
       if (pre_description = prompt.multiline("Release description:"))
         release_description << pre_description.join
@@ -334,23 +336,25 @@ module RedactedBetter
 
       if include_mediainfo || include_spectrals
         wizard.audio_files.each_with_index do |audio_file, i|
-          # SPOILER START
-          release_description << <<~DESCRIPTION
-            [hide="#{audio_file.path.basename}"]
-          DESCRIPTION
+          release_description_mutex.synchronize do
+            # SPOILER START
+            release_description << <<~DESCRIPTION
+              [hide="#{audio_file.path.basename}"]
+            DESCRIPTION
 
-          # MEDIAINFO
-          release_description << <<~DESCRIPTION if include_mediainfo
-            [quote][pre]#{`mediainfo "#{audio_file.path}"`.chomp}[/pre][/quote]
-          DESCRIPTION
+            # MEDIAINFO
+            release_description << <<~DESCRIPTION if include_mediainfo
+              [quote][pre]#{`mediainfo "#{audio_file.path}"`.chomp}[/pre][/quote]
+            DESCRIPTION
 
-          # SPECTRAL
-          release_description << "[img]{{spectral-#{i + 1}}}[/img]" if include_spectrals
+            # SPECTRAL
+            release_description << "[img]{{spectral-#{i + 1}}}[/img]" if include_spectrals
 
-          # SPOILER END
-          release_description << <<~DESCRIPTION
-            [/hide]
-          DESCRIPTION
+            # SPOILER END
+            release_description << <<~DESCRIPTION
+              [/hide]
+            DESCRIPTION
+          end
         end
       end
 
@@ -365,11 +369,14 @@ module RedactedBetter
 
               spectral_template_tag = "{{spectral-#{i + 1}}}"
 
-              unless release_description.include?(spectral_template_tag)
-                spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
+              release_description_mutex.synchronize do
+                unless release_description.include?(spectral_template_tag)
+                  spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
+                end
+
+                release_description.gsub!(spectral_template_tag, "{{spectral-#{spectrogram}}}")
               end
 
-              release_description.gsub!(spectral_template_tag, "{{spectral-#{spectrogram}}}")
               sp.success(Pastel.new.green("done."))
             else
               spectral_paths << nil
@@ -386,11 +393,13 @@ module RedactedBetter
               .each do |spectral_file_path, spectral_url|
           spectral_template_tag = "{{spectral-#{spectral_file_path}}}"
 
-          unless release_description.include?(spectral_template_tag)
-            spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
-          end
+          release_description_mutex.synchronize do
+            unless release_description.include?(spectral_template_tag)
+              spinner.error(Pastel.new.red("could not find tag in description: #{spectral_template_tag}"))
+            end
 
-          release_description.gsub!(spectral_template_tag, spectral_url)
+            release_description.gsub!(spectral_template_tag, spectral_url)
+          end
         end
         spinner.success("done.")
       end
