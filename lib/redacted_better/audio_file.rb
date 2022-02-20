@@ -1,3 +1,4 @@
+require "fileutils"
 require "mediainfo"
 require "openssl"
 require "pathname"
@@ -62,6 +63,10 @@ module RedactedBetter
 
         out_path if $?.success?
       end
+    rescue Interrupt
+      FileUtils.rm(out_path) if out_path && File.exist?(out_path)
+
+      raise
     ensure
       file&.close
     end
