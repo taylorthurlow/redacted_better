@@ -1,5 +1,4 @@
 require "json"
-require "mutex"
 
 module RedactedBetter
   class WizardPrompt
