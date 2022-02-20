@@ -152,8 +152,6 @@ module RedactedBetter
 
       body_data[:scene] = true if source_torrent.scene
 
-      File.open("temp.json", "w") { |f| f.write(body_data.to_json) }
-
       response = post(
         action: "upload",
         body: body_data,
