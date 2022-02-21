@@ -162,34 +162,32 @@ module RedactedBetter
       absolute_file_paths.each do |absolute_file_path|
         displayable_relative_path = file_paths_map_without_root[absolute_file_path].to_s.ljust(longest_name_length + 1)
 
-        if absolute_audio_file_paths.include?(absolute_file_path)
+        spinners.register("[:spinner] #{displayable_relative_path}:text") do |spinner|
+          spinner.update(text: "Checking for problems...")
 
-          # Check an audio file
-          spinners.register("[:spinner] #{displayable_relative_path}:text") do |spinner|
-            spinner.update(text: "Checking for problems...")
+          if (path_length = absolute_file_path.to_s.length) > 180
+            spinner.update(text: "")
+            spinner.error(Pastel.new.red("is greater than 180 character path length limit (#{path_length})"))
+            next
+          end
 
+          if absolute_audio_file_paths.include?(absolute_file_path)
             # @type [AudioFile]
             audio_file = audio_files.find { |af| af.path == absolute_file_path }
             raise "unable to find audio file: #{absolute_file_path}" unless audio_file
 
             audio_file.check_for_errors
 
-            spinner.update(text: "")
             if audio_file.errors.any?
               all_files_ok = false
+              spinner.update(text: "")
               spinner.error(Pastel.new.red(audio_file.errors.join(", ")))
-            else
-              spinner.success(Pastel.new.green("looks good"))
+              next
             end
           end
-        else
-          # Check a non-audio file
-          spinners.register("[:spinner] #{displayable_relative_path}:text") do |spinner|
-            spinner.update(text: "Checking for problems...")
 
-            spinner.update(text: "")
-            spinner.success(Pastel.new.yellow("skipped, not audio"))
-          end
+          spinner.update(text: "")
+          spinner.success(Pastel.new.green("looks good"))
         end
       end
 
