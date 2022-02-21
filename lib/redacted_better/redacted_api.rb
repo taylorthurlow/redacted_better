@@ -18,7 +18,7 @@ module RedactedBetter
 
     # @return [Hash] authenticated user data
     def user
-      response = @api.get(action: "index")
+      response = get(action: "index")
 
       if response.success?
         response.data
