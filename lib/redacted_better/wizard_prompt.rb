@@ -179,13 +179,13 @@ module RedactedBetter
 
     def prompt_record_label
       prompt.ask("Record label:") do |q|
-        q.default wizard.audio_files.first.label || group&.record_label
+        q.value wizard.audio_files.first.label || group&.record_label
       end
     end
 
     def prompt_catalogue_number
       prompt.ask("Catalogue number:") do |q|
-        q.default group&.catalogue_number
+        q.value group&.catalogue_number
       end
     end
 
