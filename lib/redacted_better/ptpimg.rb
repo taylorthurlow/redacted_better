@@ -27,8 +27,6 @@ module RedactedBetter
         i += 1
         [file_paths[i], "https://ptpimg.me/#{e.fetch("code")}.#{e.fetch("ext")}"]
       end
-    rescue Faraday::ServerError, Faraday::ClientError
-      nil
     end
 
     # @param file_paths [Array<String>]
