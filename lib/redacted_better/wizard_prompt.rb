@@ -402,6 +402,7 @@ module RedactedBetter
             release_description.gsub!(spectral_template_tag, spectral_url)
           end
         end
+
         spinner.success("done.")
       end
 
@@ -429,7 +430,7 @@ module RedactedBetter
     def group_from_group_id(group_id)
       response = wizard.red_api.get(action: "torrentgroup", params: { id: group_id })
 
-      Group.new(response.data["group"])
+      Group.new(response.data.fetch("group"))
     end
   end
 end
