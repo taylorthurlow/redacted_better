@@ -34,7 +34,11 @@ module RedactedBetter
     # @return [Response]
     def get(action:, params: {})
       wait_for_rate_limit do
-        response = Faraday.new(url: base_url).get do |request|
+        connection = Faraday.new(url: base_url) do |c|
+          c.response :raise_error
+        end
+
+        response = connection.get do |request|
           url = "ajax.php?action=#{action}"
           params.each { |p, v| url += "&#{p}=#{v}" }
           request.url url
@@ -54,11 +58,12 @@ module RedactedBetter
     # @return [Response]
     def post(action:, body:)
       wait_for_rate_limit do
-        faraday = Faraday.new(url: base_url) do |f|
-          f.request :multipart
+        connection = Faraday.new(url: base_url) do |c|
+          c.request :multipart
+          c.response :raise_error
         end
 
-        response = faraday.post do |request|
+        response = connection.post do |request|
           url = "ajax.php?action=#{action}"
 
           request.body = body
