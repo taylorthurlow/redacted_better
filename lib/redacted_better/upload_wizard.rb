@@ -219,6 +219,9 @@ module RedactedBetter
       output_torrent_file_path = File.join(Dir.mktmpdir, "#{torrent_file_name}.torrent")
       tracker_url = "https://flacsfor.me/#{@user.fetch("passkey")}/announce"
 
+      # Remove all .DS_Store files from the input path, recursively
+      system("find \"#{path}\" -name \".DS_Store\" -delete")
+
       _stdout, stderr, status = Open3.capture3(
         "mktorrent -s RED -p -l 18 -a \"#{tracker_url}\" -o \"#{output_torrent_file_path}\" \"#{path}\"",
       )
