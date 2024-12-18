@@ -75,6 +75,13 @@ module RedactedBetter
           code: response.status,
           body: response.body,
         )
+      rescue Faraday::Error => e
+        body_error = begin
+          JSON.parse(e.response[:body]).fetch("error", nil)
+        rescue JSON::ParserError
+        end
+
+        raise body_error || e.message
       end
     end
 
