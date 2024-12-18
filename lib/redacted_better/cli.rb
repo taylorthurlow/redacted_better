@@ -14,13 +14,13 @@ module RedactedBetter
       end
 
       @config = Config.new(@opts[:config])
-      # @api = RedactedApi.new(@config.fetch(:api_key))
+      @api = RedactedApi.new(@config.fetch(:api_key))
 
       @download_directory = @config.fetch(:directories, :download)
       @output_directory = @config.fetch(:directories, :output)
       @torrents_directory = @config.fetch(:directories, :torrents)
 
-      # @user = confirm_api_connection
+      @user = confirm_api_connection
     end
 
     # @return [void]
