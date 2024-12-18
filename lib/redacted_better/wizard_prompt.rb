@@ -422,6 +422,7 @@ module RedactedBetter
       string.gsub(wizard.config.fetch(:directories, :torrents), "/anon_torrents_dir")
             .gsub(wizard.config.fetch(:directories, :output), "/anon_output_dir")
             .gsub(wizard.config.fetch(:directories, :download), "/anon_download_dir")
+            .gsub("taylorthurlow", "anon")
     end
 
     # @param group_id [String, Integer]
