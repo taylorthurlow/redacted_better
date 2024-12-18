@@ -29,7 +29,7 @@ class Account
 
     Log.info("Logging in as #{username}... ", newline: false)
 
-    conn = Faraday.new(url: "https://redacted.ch/")
+    conn = Faraday.new(url: "https://redacted.sh/")
     response = conn.post do |request|
       request.url "login.php"
       request.headers["User-Agent"] = RedactedBetter.user_agent

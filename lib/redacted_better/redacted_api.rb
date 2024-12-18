@@ -13,7 +13,7 @@ module RedactedBetter
     def initialize(api_key)
       @api_key = api_key
       @request_log = []
-      @base_url = "https://redacted.ch/"
+      @base_url = "https://redacted.sh/"
     end
 
     # @return [Hash] authenticated user data
@@ -211,7 +211,7 @@ module RedactedBetter
 
     #   agent = Mechanize.new
     #   agent.user_agent = RedactedBetter.user_agent
-    #   url = "https://redacted.ch/torrents.php?action=edit&id=#{torrent_id}"
+    #   url = "https://redacted.sh/torrents.php?action=edit&id=#{torrent_id}"
     #   page = agent.get(url, [], nil, "Cookie" => @cookie)
 
     #   page_text = page.search("#content").text.gsub(/\s+/, " ")

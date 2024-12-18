@@ -220,7 +220,7 @@ describe Torrent do
       torrent.group.id = 123
       torrent.id = 456
 
-      url = "https://redacted.ch/torrents.php?id=123&torrentid=456"
+      url = "https://redacted.sh/torrents.php?id=123&torrentid=456"
       expect(torrent.url).to eq url
     end
   end

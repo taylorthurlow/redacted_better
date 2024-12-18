@@ -92,7 +92,7 @@ module RedactedBetter
     #
     # @return [String]
     def url
-      "https://redacted.ch/torrents.php?id=#{group.id}&torrentid=#{id}"
+      "https://redacted.sh/torrents.php?id=#{group.id}&torrentid=#{id}"
     end
 
     # Determines if there is a single all-encompassing folder at the root of the

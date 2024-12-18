@@ -273,7 +273,7 @@ module RedactedBetter
 
       if response.success?
         FileUtils.cp(absolute_torrent_file_path, config.fetch(:directories, :torrents))
-        new_url = "https://redacted.ch/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
+        new_url = "https://redacted.sh/torrents.php?id=#{response.data["groupid"]}&torrentid=#{response.data["torrentid"]}"
         spinner.success(Pastel.new.green("done: #{new_url}"))
 
         # if metadata[:format] == "FLAC" && prompt.yes?("Upload transcodes as well?")

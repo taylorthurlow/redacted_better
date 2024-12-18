@@ -267,7 +267,7 @@ module RedactedBetter
 
     # Takes a URL, meant to be provided on as a command-line parameter, and
     # extracts the group and torrent ids from it. The URL format is:
-    # https://redacted.ch/torrents.php?id=1073646&torrentid=2311120
+    # https://redacted.sh/torrents.php?id=1073646&torrentid=2311120
     #
     # @param url [String]
     #
